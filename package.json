@@ -1,0 +1,7 @@
+{
+  "name": "cognitive-battery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Touch-based cognitive battery (jsPsych 8) for a personalized vs. population change-detection study",
+  "devDependencies": {}
+}
