@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  index.html: the whole app is this one page. It has several "screens"
+  (sections), and js/main.js shows one at a time:
+
+    home → create account → participant home → session (jsPsych) → back to participant home
+    home → login ──────────↗
+
+  Participants do everything at home on their own device.
+  Add ?dev=1 to the URL for test runs: tasks get shorter, the 24-hour wait
+  between sessions is skipped, and every data row is marked dev=true.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Stops pinch/double-tap zoom on tablets and uses the full screen. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <title>Cognitive Testing Interface</title>
+
+  <!-- jsPsych 8.3.0 and plugins 2.1.0, stored locally in vendor/ (no internet needed). -->
+  <link rel="stylesheet" href="vendor/jspsych.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="vendor/jspsych.js"></script>
+  <script src="vendor/plugin-html-button-response.js"></script>
+  <script src="vendor/plugin-survey-html-form.js"></script>
+  <!-- Firebase 12.19.0 (accounts + online database), also stored locally in vendor/. -->
+  <script src="vendor/firebase/firebase-app-compat.js"></script>
+  <script src="vendor/firebase/firebase-auth-compat.js"></script>
+  <script src="vendor/firebase/firebase-firestore-compat.js"></script>
+
+  <!-- Our own code. config.js must load first because the others read CONFIG. -->
+  <script src="js/config.js"></script>
+  <script src="js/plugin-vas.js"></script>
+  <script src="js/plugin-pvt-touch.js"></script>
+  <script src="js/survey.js"></script>
+  <script src="js/pvt.js"></script>
+  <script src="js/plugin-touch-choice.js"></script>
+  <script src="js/forms.js"></script>
+  <script src="js/nback.js"></script>
+  <script src="js/flanker.js"></script>
+  <script src="js/battery.js"></script>
+  <script src="js/firebase-setup.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/main.js" defer></script>
+</head>
+<body>
+  <!-- Shown only in dev mode. -->
+  <div id="dev-banner" class="dev-banner" hidden>DEV MODE: test data only</div>
+
+  <!-- Home -->
+  <main id="screen-home" class="screen home" hidden>
+    <h1>Cognitive Testing Interface <span class="muted">(placeholder title)</span></h1>
+    <div class="home-buttons">
+      <button type="button" class="jspsych-btn big-btn" data-go="signup">Create account</button>
+      <button type="button" class="jspsych-btn big-btn" data-go="login">Login</button>
+    </div>
+  </main>
+
+  <!-- Create account -->
+  <main id="screen-signup" class="screen" hidden>
+    <h1>Create account</h1>
+    <form id="signup-form" class="form" novalidate>
+      <label>Email
+        <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required></label>
+      <label>Password
+        <input name="password" type="password" autocomplete="new-password" minlength="8" required>
+        <span class="hint">At least 8 characters.</span></label>
+      <label>Confirm password
+        <input name="confirm_password" type="password" autocomplete="new-password" required></label>
+      <label>First name
+        <input name="first_name" type="text" autocomplete="given-name" maxlength="50" required></label>
+      <label>Last name
+        <input name="last_name" type="text" autocomplete="family-name" maxlength="50" required></label>
+
+      <h2>About you</h2>
+      <p class="muted">These questions are asked only once.</p>
+      <!-- Filled in from INTAKE_FORM_HTML in js/survey.js, so the wording is defined in one place. -->
+      <div id="intake-fields"></div>
+
+      <ul class="errors" aria-live="polite"></ul>
+      <button type="submit" class="jspsych-btn big-btn">Create account</button>
+      <button type="button" class="link-btn" data-go="home">Back</button>
+    </form>
+  </main>
+
+  <!-- Login -->
+  <main id="screen-login" class="screen" hidden>
+    <h1>Login</h1>
+    <form id="login-form" class="form" novalidate>
+      <label>Email
+        <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required></label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" required></label>
+      <ul class="errors" aria-live="polite"></ul>
+      <button type="submit" class="jspsych-btn big-btn">Login</button>
+      <button type="button" class="link-btn" data-go="home">Back</button>
+    </form>
+  </main>
+
+  <!-- Participant home: shows the next session, or when it opens. Filled in by main.js. -->
+  <main id="screen-dashboard" class="screen" hidden>
+    <h1 id="dash-greeting"></h1>
+    <div id="dash-status"></div>
+    <button type="button" class="link-btn" id="logout-btn">Log out</button>
+  </main>
+
+  <!-- jsPsych draws the session in here once it starts. -->
+  <div id="jspsych-target" hidden></div>
+</body>
+</html>

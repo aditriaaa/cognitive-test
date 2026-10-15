@@ -1,0 +1,4 @@
+Firebase JavaScript SDK 12.19.0 (npm package "firebase"), "compat" builds.
+Copied unchanged from node_modules/firebase/ except the last-line source-map
+comment was removed (the .map files are not included). Do not edit.
+Files: firebase-app-compat.js, firebase-auth-compat.js, firebase-firestore-compat.js

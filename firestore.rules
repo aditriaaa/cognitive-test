@@ -1,0 +1,147 @@
+// firestore.rules — who may read or write what in the Firestore database.
+//
+// These rules run on Google's servers, so a participant cannot get around them
+// by changing the website's code. Anything not allowed here is denied.
+//
+// To publish: Firebase console → Firestore Database → Rules → paste this whole
+// file → Publish. Keep this file and the console in sync.
+//
+// Collections:
+//   identities/{uid}        email + first/last name + participant code. IDENTITY ONLY.
+//   participants/{code}     code-only research record: intake answers, dev flag.
+//                           Never contains a name or email (CLAUDE.md rule 5).
+//     /sessions/{sid}       one session attempt (number, type, form, start/end, complete)
+//       /trials/{n}         one trial = one row of raw data
+//   counters/participants   last real participant number used (P001, P002, ...)
+//   counters/dev            last dev/test number used (D001, D002, ...)
+//   researchers/{uid}       exists = that login is a researcher. Added by hand in the console.
+//
+// {uid} is the random ID Firebase gives each login. It is not personal data.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isResearcher() {
+      return signedIn() && exists(/databases/$(database)/documents/researchers/$(request.auth.uid));
+    }
+    function doc(col, id) { return /databases/$(database)/documents/$(col)/$(id); }
+
+    // 7 -> "007". Codes go up to 999.
+    function pad3(n) { return n < 10 ? '00' + string(n) : (n < 100 ? '0' + string(n) : string(n)); }
+    function codeFor(isDev, n) { return (isDev ? 'D' : 'P') + pad3(n); }
+
+    // The research record / session record as currently stored.
+    function participant(code) { return get(doc('participants', code)).data; }
+    function session(code, sid) {
+      return get(/databases/$(database)/documents/participants/$(code)/sessions/$(sid)).data;
+    }
+    // True if the logged-in person is the owner of participant record {code}.
+    function ownsParticipant(code) { return signedIn() && participant(code).owner_uid == request.auth.uid; }
+    function SESSION_KEYS() {
+      return ['participant_id', 'session_number', 'session_type', 'form', 'version', 'dev',
+              'start', 'end', 'complete', 'n_trials'];
+    }
+
+    // ---- Researchers: can only be created by hand in the console. ----
+    match /researchers/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---- Counters: hand out participant codes one at a time. ----
+    // A counter can only go up by exactly 1, and only in the same write that
+    // creates the matching participant record (so codes are never skipped or reused).
+    match /counters/{name} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && name in ['participants', 'dev']
+        && request.resource.data.keys().hasOnly(['last'])
+        && request.resource.data.last == (resource == null ? 0 : resource.data.last) + 1
+        && !exists(doc('participants', codeFor(name == 'dev', request.resource.data.last)))
+        && existsAfter(doc('participants', codeFor(name == 'dev', request.resource.data.last)));
+      allow delete: if false;
+    }
+
+    // ---- Identity (name + email). Only the person themself and researchers can read it. ----
+    match /identities/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isResearcher());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'first_name', 'last_name', 'participant_id', 'created_at'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.first_name is string && request.resource.data.first_name.size() >= 1 && request.resource.data.first_name.size() <= 50
+        && request.resource.data.last_name is string && request.resource.data.last_name.size() >= 1 && request.resource.data.last_name.size() <= 50
+        // must point at a participant record this same login is creating right now
+        && getAfter(doc('participants', request.resource.data.participant_id)).data.owner_uid == uid;
+      allow update, delete: if false;
+    }
+
+    // ---- Research record (code only). ----
+    match /participants/{code} {
+      allow read: if signedIn() && (resource.data.owner_uid == request.auth.uid || isResearcher());
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['participant_id', 'number', 'owner_uid', 'dev', 'created_at', 'intake'])
+        && request.resource.data.participant_id == code
+        && request.resource.data.owner_uid == request.auth.uid
+        && request.resource.data.dev is bool
+        && request.resource.data.number is int
+        && code == codeFor(request.resource.data.dev, request.resource.data.number)
+        && request.resource.data.intake is map
+        // one participant record per login: their identity must not exist yet,
+        // and must be created in this same write, pointing at this code
+        && !exists(doc('identities', request.auth.uid))
+        && getAfter(doc('identities', request.auth.uid)).data.participant_id == code
+        // the code must be the next one from the counter, taken in this same write
+        && getAfter(doc('counters', (request.resource.data.dev ? 'dev' : 'participants'))).data.last
+             == request.resource.data.number;
+      // The research record itself never changes after sign-up.
+      allow update, delete: if false;
+
+      // ---- Session attempts (code only). ----
+      // Created when a session starts (complete: false); updated ONCE at the
+      // end to mark it complete. Never deleted, so incomplete attempts stay on record.
+      match /sessions/{sid} {
+        allow read: if ownsParticipant(code) || isResearcher();
+        allow create: if ownsParticipant(code)
+          && request.resource.data.keys().hasOnly(SESSION_KEYS())
+          && request.resource.data.keys().hasAll(SESSION_KEYS())
+          && request.resource.data.participant_id == code
+          && request.resource.data.session_number is int
+          && request.resource.data.session_number >= 1 && request.resource.data.session_number <= 20
+          && request.resource.data.session_type in ['familiarization', 'baseline', 'test-rest', 'test-fatigue']
+          && request.resource.data.form in ['A', 'B']
+          && request.resource.data.version is string
+          && request.resource.data.dev is bool
+          // a dev/test account (D###) can only ever make dev sessions
+          && (request.resource.data.dev || !participant(code).dev)
+          && request.resource.data.start is string
+          && request.resource.data.end == null
+          && request.resource.data.complete == false
+          && request.resource.data.n_trials == null;
+        allow update: if ownsParticipant(code)
+          && resource.data.complete == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['end', 'complete', 'n_trials'])
+          && request.resource.data.complete == true
+          && request.resource.data.end is string
+          && request.resource.data.n_trials is int;
+        allow delete: if false;
+
+        // ---- Trial-level data: one doc per trial (one row of raw data). ----
+        // Can only be added while the session is still running, must carry the
+        // same participant code, session number and dev flag as its session,
+        // and can never be changed or deleted afterwards.
+        match /trials/{tid} {
+          allow read: if ownsParticipant(code) || isResearcher();
+          allow create: if ownsParticipant(code)
+            && session(code, sid).complete == false
+            && request.resource.data.participant_id == code
+            && request.resource.data.session_number == session(code, sid).session_number
+            && request.resource.data.dev == session(code, sid).dev
+            && request.resource.data.trial_index is int;
+          allow update, delete: if false;
+        }
+      }
+    }
+  }
+}

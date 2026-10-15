@@ -4,16 +4,14 @@
  * Wording here must stay IDENTICAL across sessions. If you reword an item,
  * bump CONFIG.VERSION and get the change approved first.
  *
- * Every answer is saved in the "responses" column as JSON (factual items) or
- * in the "response" column (VAS items, one row per item).
+ * Answers are saved in the "response" column: as JSON for the factual items
+ * (one row for the whole form), as a 0–100 number for VAS items (one row per item).
+ * Intake answers are saved with the account instead (participants/{code}.intake).
  */
 
-// One-time intake: familiarization session only.
-function intakeTrial() {
-  return {
-    type: jsPsychSurveyHtmlForm,
-    preamble: "<h2>About you</h2><p>These questions are asked only once.</p>",
-    html: `
+// One-time intake questions, asked once on the "Create account" page
+// (see js/main.js). The wording lives here so it is never changed by accident.
+const INTAKE_FORM_HTML = `
       <div class="form">
         <label>Age (years)
           <input name="age" type="number" inputmode="numeric" min="10" max="99" required></label>
@@ -41,10 +39,24 @@ function intakeTrial() {
             <option value="" disabled selected>Choose…</option>
             <option>Yes</option><option>No</option>
           </select></label>
-      </div>`,
-    button_label: "Continue",
-    data: { task: "intake" }
+      </div>`;
+
+// Follow-up questions: a <label data-show-if="caffeine_4h=Yes"> is only shown
+// while the question named caffeine_4h is answered "Yes". If the answer changes
+// back, the follow-up is hidden AND emptied, so a "No" can never be saved
+// together with a caffeine amount. Hidden follow-ups are saved as "".
+function showFollowUps(form) {
+  const followUps = [...form.querySelectorAll("[data-show-if]")];
+  const update = () => {
+    for (const label of followUps) {
+      const [name, value] = label.dataset.showIf.split("=");
+      const show = form.elements[name].value === value;
+      label.hidden = !show;
+      if (!show) label.querySelectorAll("input, select, textarea").forEach((el) => { el.value = ""; });
+    }
   };
+  form.addEventListener("change", update);
+  update();
 }
 
 // Factual pre-session items: every session.
@@ -63,8 +75,12 @@ function preSessionFacts() {
             <option>No</option><option>Yes</option>
           </select></label>
 
-        <label>If yes, what and about how much? (leave blank if no)
-          <input name="caffeine_detail" type="text" maxlength="80"></label>
+        <!-- Follow-up: only shown when the answer above is "Yes" (see showFollowUps). -->
+        <label data-show-if="caffeine_4h=Yes" hidden>What did you have? (be as specific as possible)
+          <input name="caffeine_what" type="text" maxlength="80"></label>
+
+        <label data-show-if="caffeine_4h=Yes" hidden>About how much?
+          <input name="caffeine_amount" type="text" maxlength="40"></label>
 
         <label>When did you last eat?
           <select name="last_meal" required>
@@ -92,10 +108,12 @@ function preSessionFacts() {
             <option>No</option><option>Yes</option>
           </select></label>
 
-        <label>If yes, a few words (optional)
+        <!-- Follow-up: only shown when the answer above is "Yes". -->
+        <label data-show-if="unusual_day=Yes" hidden>What is unusual? A few words (optional)
           <input name="unusual_day_note" type="text" maxlength="120"></label>
       </div>`,
     button_label: "Continue",
+    on_load: () => showFollowUps(document.querySelector("#jspsych-survey-html-form")),
     data: { task: "presession_facts" }
   };
 }

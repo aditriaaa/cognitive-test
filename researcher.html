@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  researcher.html: the researcher's page for downloading the study data as CSV.
+
+  Only works for a login that has a researchers/{uid} document in Firestore.
+  That document can only be added by hand in the Firebase console, and
+  firestore.rules checks it on Google's servers, so this page being public
+  does not expose any data.
+
+  Downloads are keyed by participant CODE only. Names and emails (identities)
+  are deliberately NOT downloadable here (CLAUDE.md rule 5).
+
+  Add ?emulator=1 (on this computer only) to use the local test Firebase.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Researcher data download</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Firebase 12.19.0, stored locally in vendor/. -->
+  <script src="vendor/firebase/firebase-app-compat.js"></script>
+  <script src="vendor/firebase/firebase-auth-compat.js"></script>
+  <script src="vendor/firebase/firebase-firestore-compat.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/firebase-setup.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/researcher.js" defer></script>
+</head>
+<body class="researcher">
+  <div id="dev-banner" class="dev-banner" hidden>LOCAL EMULATOR: test data only</div>
+
+  <!-- Login -->
+  <main id="r-login" class="screen" hidden>
+    <h1>Researcher login</h1>
+    <form id="r-login-form" class="form" novalidate>
+      <label>Email
+        <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required></label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" required></label>
+      <ul class="errors"></ul>
+      <button type="submit" class="jspsych-btn big-btn">Login</button>
+    </form>
+  </main>
+
+  <!-- Data -->
+  <main id="r-data" class="screen r-wide" hidden>
+    <div class="r-top">
+      <h1>Study data</h1>
+      <button type="button" class="link-btn" id="r-logout">Log out</button>
+    </div>
+
+    <div class="r-controls">
+      <label>Show
+        <select id="r-which">
+          <option value="real" selected>Real data only</option>
+          <option value="dev">Dev / test data only</option>
+        </select></label>
+      <button type="button" class="jspsych-btn" id="r-refresh">Refresh</button>
+    </div>
+
+    <p id="r-summary" class="muted">Loading…</p>
+
+    <div class="r-downloads">
+      <button type="button" class="jspsych-btn" id="r-dl-trials">Download all trials (CSV)</button>
+      <button type="button" class="jspsych-btn" id="r-dl-sessions">Download session list (CSV)</button>
+      <button type="button" class="jspsych-btn" id="r-dl-intake">Download intake (CSV)</button>
+    </div>
+    <p id="r-progress" class="muted"></p>
+    <ul class="errors" id="r-errors"></ul>
+
+    <div class="r-table-wrap">
+      <table class="r-table">
+        <thead>
+          <tr><th>Code</th><th>Session</th><th>Type</th><th>Form</th><th>Started</th>
+              <th>Complete</th><th>Trials</th><th>Version</th></tr>
+        </thead>
+        <tbody id="r-rows"></tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
