@@ -94,11 +94,25 @@ function buildDsst({ practice, form }) {
       data: { task: "instructions" }
     });
   }
-  // Every item is listed, but each one only runs while time is left.
+  // The timed block: ONE item, repeated (loop) while time is left, showing the
+  // next item from the frozen list each time. (Listing all 198 items and
+  // skipping the unused ones would leave gaps in trial_index, because jsPsych
+  // numbers skipped trials too.)
   const F = FORMS[form].dsst;
-  timeline.push(...F.items.map((d, i) => ({
-    timeline: [item(F.key, d, i, "test")],
-    conditional_function: () => blockStart === null || remainingMs() > 0
-  })));
+  let k = 0; // position in F.items of the item being shown
+  const next = item(F.key, F.items[0], 0, "test");
+  timeline.push({
+    timeline: [{
+      ...next,
+      // Functions: worked out when each repetition starts, so each shows item k.
+      stimulus: () => `<div class="dsst-probe">${symbolSvg(F.key[F.items[k]], 110)}</div>`,
+      correct_value: () => String(F.items[k]),
+      on_finish: (data) => {
+        Object.assign(data, { item_in_block: k + 1, digit: F.items[k], symbol: F.key[F.items[k]] });
+        k++;
+      }
+    }],
+    loop_function: () => remainingMs() > 0 && k < F.items.length
+  });
   return { timeline };
 }

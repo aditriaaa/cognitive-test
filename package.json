@@ -3,5 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "description": "Touch-based cognitive battery (jsPsych 8) for a personalized vs. population change-detection study",
-  "devDependencies": {}
+  "scripts": {
+    "serve": "python3 tools/serve.py",
+    "forms": "node tools/make-forms.mjs",
+    "test:tasks": "node tests/tasks.test.mjs",
+    "test:schedule": "node tests/schedule.test.mjs",
+    "test:e2e": "firebase emulators:exec --only auth,firestore --project demo-cognitivebattery \"node tests/e2e.test.mjs\"",
+    "timing": "node tests/timing.mjs"
+  },
+  "devDependencies": {
+    "firebase-tools": "14.27.0",
+    "playwright": "1.56.1"
+  }
 }
