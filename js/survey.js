@@ -39,6 +39,13 @@ const INTAKE_FORM_HTML = `
             <option value="" disabled selected>Choose…</option>
             <option>Yes</option><option>No</option>
           </select></label>
+
+        <!-- Added in 0.3.1: the Stroop task needs normal colour vision (red/green). -->
+        <label>Are you colour-blind? (Do you have trouble telling some colours apart, such as red and green?)
+          <select name="colour_blind" required>
+            <option value="" disabled selected>Choose…</option>
+            <option>No</option><option>Yes</option><option>Not sure</option>
+          </select></label>
       </div>`;
 
 // Follow-up questions: a <label data-show-if="caffeine_4h=Yes"> is only shown

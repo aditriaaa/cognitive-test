@@ -7,7 +7,7 @@
  * protocol produced which data.
  */
 const CONFIG = {
-  VERSION: "0.3.0-m2", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress)
+  VERSION: "0.3.1-m2", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min)
 
   // Which session comes next is worked out automatically from how many
   // sessions the participant has COMPLETED (see nextSession() in main.js):
@@ -40,10 +40,10 @@ const CONFIG = {
 
   // The battery: tasks in a FIXED order (research plan: "fixed task order,
   // standardized 30-second breaks between tasks"). Tasks are added to this list
-  // as they are built (M2): DSST and Stroop are still to come.
-  // Planned final order: pvt, nback, flanker, dsst, stroop (Stroop: pilot only).
+  // as they are built (M2). Stroop is in the pilot only; the main study keeps
+  // the 4 most reliable tasks (ICC >= 0.6).
   BATTERY: {
-    order: ["pvt", "nback", "flanker"],
+    order: ["pvt", "nback", "flanker", "dsst", "stroop"],
     breakSeconds: 30
   },
 
@@ -67,11 +67,37 @@ const CONFIG = {
   // incongruent minus congruent RT cost". Confirm before the pilot.
   // The trial ORDER for forms A and B is pre-generated in js/forms.js.
   FLANKER: {
-    trials: 100,               // 50 congruent + 50 incongruent, half pointing each way
+    trials: 220,               // ~4 min (research plan): 55 of each congruent/incongruent x left/right.
+                               // Each trial ~1.05-1.1 s (0.5 s cross + typical 0.5-0.6 s response).
     practiceTrials: 12,        // familiarization session only, with feedback
     fixationMs: 500,           // "+" before each row of arrows
     responseWindowMs: 2000,    // no tap within 2 s = no response
     feedbackMs: 800            // practice feedback ("Correct" / "Wrong" / "Too slow")
+  },
+
+  // Digit-symbol substitution (DSST-style; Jaeger, 2018).
+  // The key (digits 1-9, each paired with a symbol) stays on screen. A symbol
+  // appears; the participant finds it in the key and taps its digit.
+  // Score (analysis): correct items in 90 s.
+  // PROPOSED VALUES: the research plan gives only "2 min; correct items per 90 s".
+  // Symbol pairings and item order for forms A and B are in js/forms.js.
+  DSST: {
+    durationSeconds: 90,
+    items: 198,                // 22 of each digit; more than anyone can do in 90 s
+    practiceItems: 9,          // each digit once; familiarization only, untimed, with feedback
+    feedbackMs: 600
+  },
+
+  // Stroop (pilot only; backup for the flanker). A colour word appears in a
+  // coloured ink; tap the INK colour. Incongruent minus congruent RT = Stroop effect.
+  // PROPOSED VALUES: not in the research plan yet. Confirm before the pilot.
+  STROOP: {
+    colors: { red: "#e53935", green: "#43a047", blue: "#1e88e5", yellow: "#fdd835" },
+    trials: 96,                // 48 congruent (12 per colour) + 48 incongruent (each word/ink pair 4 times)
+    practiceTrials: 16,        // 8 congruent + 8 incongruent
+    fixationMs: 500,
+    responseWindowMs: 2000,
+    feedbackMs: 800
   },
 
   // Dev mode (add ?dev=1 to the URL) shortens tasks for quick testing.
@@ -80,6 +106,8 @@ const CONFIG = {
     pvtDurationSeconds: 15,
     breakSeconds: 3,
     flankerTrials: 12,         // first 12 trials of the form
-    nbackTrials: 20            // first 20 trials of the form
+    nbackTrials: 20,           // first 20 trials of the form
+    dsstSeconds: 20,
+    stroopTrials: 12
   }
 };

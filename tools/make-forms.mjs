@@ -113,13 +113,53 @@ function nbackList(n, targets, seed) {
   return letters.map((letter, i) => ({ letter, target: flags[i] }));
 }
 
-const F = CONFIG.FLANKER, N = CONFIG.NBACK;
+// ---- DSST ----
+// key:   which symbol goes with each digit 1-9 (a different pairing per form,
+//        so the key can't simply be remembered from the last session)
+// items: the digit whose symbol is shown, e.g. [4, 7, 1, ...]; every digit
+//        equally often, never the same digit twice in a row
+const SYMBOLS = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]; // drawn in js/dsst.js
+// avoidKey: another form's key; no digit may keep the same symbol as in it.
+function dsstForm(nItems, seed, avoidKey = null) {
+  if (nItems % 9) throw new Error("DSST item count must be a multiple of 9");
+  const random = rng(seed + "-key");
+  let symbols;
+  do { symbols = shuffle(SYMBOLS, random); }
+  while (avoidKey && symbols.some((s, i) => avoidKey[i + 1] === s));
+  const key = Object.fromEntries(symbols.map((s, i) => [i + 1, s]));
+  const digits = Array.from({ length: nItems }, (_, i) => (i % 9) + 1);
+  return { key, items: constrainedShuffle(digits, seed + "-items", [(d) => d], 1) };
+}
+
+// ---- Stroop: { word: "red", ink: "blue" } ----
+// Main list: each colour word in its own ink 12 times (congruent) and each
+// word/other-ink pair 4 times (incongruent). Practice: 2 congruent per colour
+// + 2 incongruent per ink. No more than 3 in a row of the same ink, word or condition.
+function stroopList(perCongruent, perPair, seed) {
+  const colors = Object.keys(CONFIG.STROOP.colors);
+  const items = [];
+  for (const ink of colors) {
+    for (let k = 0; k < perCongruent; k++) items.push({ word: ink, ink });
+    const others = colors.filter((c) => c !== ink);
+    // perPair = how many times each other word appears in this ink (a fraction
+    // means: cycle through the other words, e.g. practice uses 2 per ink in total)
+    const nInc = Math.round(perPair * others.length);
+    for (let k = 0; k < nInc; k++) items.push({ word: others[k % others.length], ink });
+  }
+  return constrainedShuffle(items, seed, [(t) => t.ink, (t) => t.word, (t) => t.word === t.ink]);
+}
+
+const F = CONFIG.FLANKER, N = CONFIG.NBACK, D = CONFIG.DSST, S = CONFIG.STROOP;
 const forms = {
-  A: { flanker: flankerList(F.trials, "flanker-A"), nback: nbackList(N.trials, N.targets, "nback-A") },
-  B: { flanker: flankerList(F.trials, "flanker-B"), nback: nbackList(N.trials, N.targets, "nback-B") },
+  A: { flanker: flankerList(F.trials, "flanker-A"), nback: nbackList(N.trials, N.targets, "nback-A"),
+       dsst: dsstForm(D.items, "dsst-A"), stroop: stroopList(12, 4, "stroop-A") },
+  B: { flanker: flankerList(F.trials, "flanker-B"), nback: nbackList(N.trials, N.targets, "nback-B"),
+       dsst: dsstForm(D.items, "dsst-B", dsstForm(D.items, "dsst-A").key), stroop: stroopList(12, 4, "stroop-B") },
   practice: {
     flanker: flankerList(F.practiceTrials, "flanker-practice"),
-    nback: nbackList(N.practiceTrials, N.practiceTargets, "nback-practice")
+    nback: nbackList(N.practiceTrials, N.practiceTargets, "nback-practice"),
+    dsst: dsstForm(D.practiceItems, "dsst-practice"),
+    stroop: stroopList(2, 2 / 3, "stroop-practice")
   }
 };
 
@@ -136,5 +176,5 @@ const FORMS = ${JSON.stringify(forms)};
 `;
 fs.writeFileSync(path.join(root, "js/forms.js"), out);
 for (const [name, f] of Object.entries(forms)) {
-  console.log(`${name}: ` + Object.entries(f).map(([task, list]) => `${task} ${list.length} trials`).join(", "));
+  console.log(`${name}: ` + Object.entries(f).map(([task, list]) => `${task} ${(list.items || list).length} trials`).join(", "));
 }

@@ -16,6 +16,8 @@
  *      (skipped when not tapping was correct: nothing happened, nothing to say).
  *
  * Only the FIRST tap counts; later taps in the same trial are ignored.
+ * `header` is shown above the stimulus from the start and is NOT part of the
+ * timed stimulus (DSST: the digit-symbol key that stays on screen).
  *
  * Saved per trial (plus whatever the task puts in `data`, e.g. condition):
  *   response      value of the button tapped, or null (no tap)
@@ -41,7 +43,9 @@ var jsPsychTouchChoice = (function (jspsych) {
       end_on_response: { type: jspsych.ParameterType.BOOL, default: true },
       trial_ms: { type: jspsych.ParameterType.INT, default: null },         // fixed-pace trials only
       feedback: { type: jspsych.ParameterType.BOOL, default: false },
-      feedback_ms: { type: jspsych.ParameterType.INT, default: 800 }
+      feedback_ms: { type: jspsych.ParameterType.INT, default: 800 },
+      header: { type: jspsych.ParameterType.HTML_STRING, default: "" },  // always visible (DSST key)
+      css_class: { type: jspsych.ParameterType.STRING, default: "" }     // per-task look (e.g. "stroop")
     },
     data: {
       response: { type: jspsych.ParameterType.STRING },
@@ -56,7 +60,8 @@ var jsPsychTouchChoice = (function (jspsych) {
 
     trial(display_element, trial) {
       display_element.innerHTML = `
-        <div class="tc-area">
+        <div class="tc-area ${trial.css_class}">
+          ${trial.header ? `<div class="tc-header">${trial.header}</div>` : ""}
           <div class="tc-stage">
             <div class="tc-fixation" id="tc-fixation">+</div>
             <div class="tc-stimulus" id="tc-stimulus" style="visibility:hidden">${trial.stimulus}</div>

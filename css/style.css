@@ -346,3 +346,33 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   border: 2px solid var(--border); border-radius: 8px; font-size: 28px; font-weight: 700;
 }
 .nback-example span.hit { border-color: var(--accent); background: #dde6f5; }
+
+/* Always-visible part of a tap-choice screen (DSST key) */
+.tc-header { padding: 44px 16px 0; }   /* room above for the dev/quick-test banner */
+
+/* DSST: key at the top, symbol in the middle, keypad 1-9 at the bottom */
+.dsst-key { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; }
+.dsst-cell {
+  width: min(72px, 10vw); border: 2px solid var(--border); border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; color: var(--text);
+}
+.dsst-cell svg { width: min(40px, 6vw); height: auto; }
+.dsst-digit { font-size: 22px; font-weight: 700; border-bottom: 1px solid var(--border); width: 100%; text-align: center; margin-bottom: 4px; }
+.dsst-probe { color: var(--text); }
+.dsst .tc-buttons { gap: 8px; }
+.dsst .tc-btn { font-size: 34px; font-weight: 700; min-height: 110px; }
+#jspsych-target .dsst-key { margin: 16px 0; }
+
+/* Stroop: dark screen, coloured words, colour-patch buttons */
+.tc-area.stroop { background: #1c1c1c; }
+.stroop .tc-fixation { color: #ddd; }
+.stroop .tc-btn { background: #2a2a2a; border-color: #555; }
+.stroop .tc-btn.tc-pressed { border-color: #fff; }
+.stroop .tc-good { color: #7ddc8a; }
+.stroop .tc-bad { color: #ff8a80; }
+.stroop-word { font-size: min(110px, 16vw); font-weight: 800; letter-spacing: 2px; }
+.stroop-patch { display: inline-block; width: 64px; height: 64px; border-radius: 12px; vertical-align: middle; }
+.stroop-example { background: #1c1c1c; border-radius: 12px; padding: 16px; margin: 16px auto; max-width: 480px; }
+.stroop-example .stroop-word { font-size: 64px; }
+.stroop-example p { color: #ccc; }
+.stroop-example .stroop-patch { width: 28px; height: 28px; border-radius: 6px; }

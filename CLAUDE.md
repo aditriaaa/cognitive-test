@@ -39,7 +39,7 @@ Does comparing a person to their own past performance detect a real change in co
 | `?quick=1` quick test mode (localhost only, added 2026-10-14) | For building tasks: no login, starts a session straight away as `QUICKTEST` (session number 0), nothing uploaded, data only in the browser backup; always dev. `&type=baseline|test-rest|test-fatigue`, `&form=B`. |
 | Plain HTML/JS, no build step | Abhi can read and edit everything; hostable on GitHub Pages |
 
-Open questions: real backend for accounts + data (Firebase/Supabase/DataPipe → OSF; must match the IRB privacy plan, and participants may be minors); online consent/assent (the old researcher consent checkbox was removed with the launcher); how data reaches the researcher (now: researcher.html CSV download; still to describe in the IRB plan); enforcing the same 2-hour time-of-day window (only the 24 h gap is enforced); confirm form and counterbalancing rules.
+Open questions: real backend for accounts + data (Firebase/Supabase/DataPipe → OSF; must match the IRB privacy plan, and participants may be minors); online consent/assent (the old researcher consent checkbox was removed with the launcher); how data reaches the researcher (now: researcher.html CSV download; still to describe in the IRB plan); enforcing the same 2-hour time-of-day window (only the 24 h gap is enforced); confirm form and counterbalancing rules; prespecify what happens to Stroop data from participants who answer colour-blind Yes / Not sure.
 
 ## Session structure
 
@@ -68,7 +68,7 @@ Response variability = RT coefficient of variation within each task (no extra ta
 
 ## Questionnaires (exact wording lives in `js/survey.js`)
 
-- **Intake (familiarization only):** age, handedness, prior cognitive-test experience, video game hours/week, typical school-night sleep, needs glasses.
+- **Intake (familiarization only):** age, handedness, prior cognitive-test experience, video game hours/week, typical school-night sleep, needs glasses, colour-blind (No / Yes / Not sure; added 0.3.1 for Stroop; Stroop still runs for everyone, the analysis handles it).
 - **Pre-session facts (every session):** sleep hours last night, caffeine in last 4 h (+ optional detail), time since last meal, hard exercise in last 2 h, feeling unwell (yes/no, no details), unusual day (+ optional note).
 - **Pre-session VAS (every session):** sleep quality, mental fatigue, motivation, stress.
 - **Post-manipulation VAS (test sessions only):** mental fatigue (manipulation check).
@@ -100,10 +100,13 @@ Prespecified session exclusions: sleep < 5 h; > 30% of trials missing or anticip
   - [x] Test a full session in a headless browser with simulated touches; check the CSV (all 4 session types pass in headless WebKit with iPad emulation, 2026-10-09)
   - [ ] Test on a real district iPad (Safari download flow, wake lock, touch timing)
 - [ ] **M2** — 2-back, DSST, flanker, Stroop with parallel forms A/B
-  - Design agreed 2026-10-14: fixed order PVT → 2-back → flanker → DSST → Stroop (Stroop added by Abhi; pilot only, NOT yet in the research plan), 30 s auto breaks, practice with feedback before each task in familiarization only. Trial counts/timings are PROPOSALS (plan doesn't specify): confirm with mentor. Device policy (phones?) still undecided. The research plan's Software section still says laptop + wired keyboard: needs updating to at-home touch.
+  - Design agreed 2026-10-14: fixed order PVT → 2-back → flanker → DSST → Stroop (Stroop added by Abhi; pilot only, NOT yet in the research plan), 30 s auto breaks, practice with feedback before each task in familiarization only. Trial counts/timings are PROPOSALS (plan doesn't specify): confirm with mentor. Device: **iPad only** (Abhi, 2026-10-22); layouts designed for iPad portrait + landscape; nothing blocks other devices (not requested). The research plan's Software section still says laptop + wired keyboard: needs updating to at-home touch.
   - [x] Step 1 (2026-10-14): `js/plugin-touch-choice.js` (shared stimulus + tap trial; rAF onset, pointerdown, first tap only, pointer_type), `js/battery.js` (order from `CONFIG.BATTERY.order`, break screen), `js/flanker.js` (SVG arrows, 100 trials, 12 practice), `tools/make-forms.mjs` → `js/forms.js` (seeded, balanced, max 3 in a row; reproducible byte-for-byte). VERSION 0.3.0-m2. Emulator test 11/11 (order, form A sequence, correctness incl. no-tap, RT of taps scheduled 300 ms after onset recorded as 300–303 ms, 3 s dev break = 3005 ms).
   - [x] Step 2 (2026-10-14): `js/nback.js` 2-back: letters B D F H K M R T, 0.5 s letter + blank, fixed 2.5 s pace, 90 trials / 27 matches (30%), 20 practice / 6 matches; one MATCH button (not tapping = correct on non-matches). Forms: no 1-back or 3-back lures and ≤ 2 matches in a row, so A and B are equally hard. Practice feedback skipped after a correctly ignored non-match. Quick-mode test 10/10 (hits/misses/false alarms graded right, RT 400–402 ms for taps at 400 ms, every trial 2.50 s). Note: the browser backup CSV writes empty values as the text "null" (the Firestore data and researcher CSV keep real empty values).
-  - [ ] Step 3: DSST · [ ] Step 4: Stroop · [ ] Step 5: practice/forms review, e2e update
+  - [x] Step 3 (2026-10-22): `js/dsst.js` DSST: key (digits 1-9 + 9 SVG symbols) always on screen (plugin `header`), a symbol appears, participant taps its DIGIT on a 1-9 keypad (changed from the first proposal "digit → tap symbol", which could be answered by button position alone). 90 s block (clock starts at first test item; last item's response window is the time left, so the block ends exactly at 90 s); 198 items (22 per digit, no immediate repeats); 9 practice items untimed with feedback, separate practice key. Form B's key shares no digit-symbol pair with A.
+  - [x] Step 4 (2026-10-22): `js/stroop.js` Stroop (pilot only): RED/GREEN/BLUE/YELLOW in coloured ink on a dark screen, 4 colour-patch buttons (no words), tap the ink. 96 trials (48 congruent, 12 per colour; 48 incongruent, each word/ink pair 4×), 16 practice; fixation 500 ms, 2 s window. Colour vision: intake question added in 0.3.1 (see Questionnaires). Quick-mode full-battery test 14/14 (order PVT→2-back→flanker→DSST→Stroop with breaks; DSST stopped at 19.99 s for a 20 s dev block; grading incl. deliberate errors; RT 250–254 / 301–303 ms for taps at 250 / 300 ms).
+  - [x] 0.3.1-m2 (2026-10-22): intake question `colour_blind` (required); flanker 220 trials (55 per cell) to match the plan's ~4 min (measured: 3.87 min at a simulated mean RT of 546 ms). Emulator test 5/5 (question required, saved in `participants/{code}.intake`, in researcher intake CSV).
+  - [ ] Step 5: practice/forms review, timing of the full real-length battery, e2e update.
 - [ ] **M3** — TloadDback fatigue task (titrated pace) + neutral video condition
 - [ ] **M4** — full session flow, version tagging (`git tag v1.0-pilot`), timing-check page, GitHub Pages deploy
 
@@ -129,6 +132,8 @@ js/battery.js         task order + 30 s breaks
 js/plugin-touch-choice.js  shared stimulus + tap trial (flanker, 2-back, Stroop)
 js/nback.js           2-back block
 js/flanker.js         flanker block
+js/dsst.js            digit-symbol block (symbols drawn as SVG)
+js/stroop.js          Stroop block (pilot only)
 js/forms.js           GENERATED frozen trial orders, forms A/B (tools/make-forms.mjs)
 js/main.js            screens, sign-up/login, session schedule, session flow + saving
 css/style.css         layout and touch styles

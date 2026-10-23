@@ -12,7 +12,9 @@ function buildBattery(jsPsych, { practice, form }) {
     pvt: () => buildPvt(jsPsych, {
       practice, durationSeconds: DEV ? CONFIG.DEV.pvtDurationSeconds : CONFIG.PVT.durationSeconds }),
     nback: () => buildNback({ practice, form }),
-    flanker: () => buildFlanker({ practice, form })
+    flanker: () => buildFlanker({ practice, form }),
+    dsst: () => buildDsst({ practice, form }),
+    stroop: () => buildStroop({ practice, form })
   };
   const breakSeconds = DEV ? CONFIG.DEV.breakSeconds : CONFIG.BATTERY.breakSeconds;
 
