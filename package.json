@@ -9,7 +9,9 @@
     "test:tasks": "node tests/tasks.test.mjs",
     "test:schedule": "node tests/schedule.test.mjs",
     "test:e2e": "firebase emulators:exec --only auth,firestore --project demo-cognitivebattery \"node tests/e2e.test.mjs\"",
-    "timing": "node tests/timing.mjs"
+    "timing": "node tests/timing.mjs",
+    "test:calibration": "node tests/tload-calibration.test.mjs",
+    "test:tload": "node tests/tload.test.mjs"
   },
   "devDependencies": {
     "firebase-tools": "14.27.0",

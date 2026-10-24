@@ -29,7 +29,8 @@ async function device() {
   await page.waitForSelector("#screen-home:not([hidden])");
   await page.evaluate(() => {
     CONFIG.SCHEDULE.sessionsAvailable = 8;
-    Object.assign(CONFIG.DEV, { pvtDurationSeconds: 3, breakSeconds: 1, nbackTrials: 6, flankerTrials: 8, dsstSeconds: 5, stroopTrials: 6 });
+    Object.assign(CONFIG.DEV, { pvtDurationSeconds: 3, breakSeconds: 1, nbackTrials: 6, flankerTrials: 8, dsstSeconds: 5, stroopTrials: 6,
+                                tloadBlockItems: 8, tloadMainSeconds: 20, tloadChunkSeconds: 10 });
   });
   return { ctx, page };
 }
@@ -131,8 +132,22 @@ const unfinished = trials.filter((t) => t.session_complete === "false");
 check("unfinished session: the trials done before quitting are kept", unfinished.length > 0 && unfinished.every((t) => t.session_number === "2"), `${unfinished.length} rows`);
 check("practice only in session 1", trials.some((t) => t.session_type === "familiarization" && t.phase === "practice") &&
   !trials.some((t) => t.session_type !== "familiarization" && t.phase === "practice"));
-check("test sessions have the manipulation step (placeholder until M3)",
-  ["test-rest", "test-fatigue"].every((type) => trials.some((t) => t.session_type === type && t.task === "manipulation_placeholder")));
+check("T-rest has the video step (placeholder until a video is chosen)",
+  trials.some((t) => t.session_type === "test-rest" && t.task === "manipulation_placeholder"));
+// TloadDback: calibrations at the end of baselines 4 and 5 (sessions 5 and 6), used by T-fatigue.
+const results = trials.filter((t) => t.task === "tload_calibration_result");
+check("calibration results saved in sessions 5 and 6 only", results.map((t) => t.session_number).join() === "5,6",
+  results.map((t) => `S${t.session_number}: ${t.std_final} ms, calibrated=${t.calibrated}`).join("; "));
+check("familiarization only before the first calibration (session 5)", trials.filter((t) => t.phase && t.phase.startsWith("familiarization-"))
+  .every((t) => t.session_number === "5"));
+const fatigue = trials.filter((t) => t.session_type === "test-fatigue" && t.task === "tload" && t.phase === "main");
+const best = Math.min(...results.filter((t) => t.calibrated === "true").map((t) => Number(t.std_final)));
+check("T-fatigue runs at the faster calibrated pace, read back from the database", fatigue.length > 0 &&
+  fatigue.every((t) => Number(t.std_ms) === best && t.std_source === "calibrated"), `${fatigue[0] && fatigue[0].std_ms} ms (best ${best})`);
+check("T-fatigue: fatigue task comes before the battery", (() => {
+  const f = trials.filter((t) => t.session_type === "test-fatigue");
+  return f.findIndex((t) => t.task === "tload") < f.findIndex((t) => t.task === "pvt");
+})());
 check("no names or emails anywhere in the trial data", !/Testfirst|Testlast|@test\.dev/.test(trialsText));
 check("device info on every row", trials.every((t) => t.user_agent && t.screen_w && t.timezone));
 

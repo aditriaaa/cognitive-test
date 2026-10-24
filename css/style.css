@@ -376,3 +376,13 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 .stroop-example .stroop-word { font-size: 64px; }
 .stroop-example p { color: #ccc; }
 .stroop-example .stroop-patch { width: 28px; height: 28px; border-radius: 6px; }
+
+/* TloadDback (js/plugin-tload.js): item in the middle; SAME LETTER on the left
+   (left hand), ODD / EVEN on the right (right hand), like the keyboard version. */
+.tload-item { font-size: min(150px, 30vw); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.tload-buttons { align-items: stretch; }
+.tload-buttons .tload-gap { flex: 0.6; }
+.tload-btn { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.tload-same { flex: 1.2; }
+.tload-rules { display: inline-block; text-align: left; border: 2px solid var(--border); border-radius: 12px; padding: 12px 18px; margin: 8px 0 16px; }
+.tload-rules div { margin: 6px 0; }

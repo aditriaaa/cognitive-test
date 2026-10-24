@@ -169,7 +169,18 @@ const exists = (snap) => snap.exists;
 // Returns { participant_id, sessions: [...] } (the shape nextSession() expects).
 async function loadSessionRecord(participant_id) {
   const snap = await sessionsCol(participant_id).orderBy("start").get();
-  return { participant_id, sessions: snap.docs.map((d) => d.data()) };
+  return { participant_id, sessions: snap.docs.map((d) => ({ id: d.id, ...d.data() })) };
+}
+
+// The TloadDback calibration results saved at the end of baselines 4 and 5
+// (one "tload_calibration_result" row each), from complete sessions only, and
+// only real or only dev sessions to match the current mode.
+async function loadCalibrationResults(participant_id) {
+  const { sessions } = await loadSessionRecord(participant_id);
+  const done = sessions.filter((s) => s.complete && s.session_type === "baseline" && Boolean(s.dev) === DEV);
+  const snaps = await Promise.all(done.map((s) => sessionsCol(participant_id).doc(s.id)
+    .collection("trials").where("task", "==", "tload_calibration_result").get()));
+  return snaps.flatMap((snap) => snap.docs.map((d) => d.data()));
 }
 
 // Creates the session doc before the first trial. Throws if it can't be saved.

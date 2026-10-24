@@ -7,7 +7,7 @@
  * protocol produced which data.
  */
 const CONFIG = {
-  VERSION: "0.3.1-m2", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min)
+  VERSION: "0.4.0-m3", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress)
 
   // Which session comes next is worked out automatically from how many
   // sessions the participant has COMPLETED (see nextSession() in main.js):
@@ -20,12 +20,12 @@ const CONFIG = {
     baselineSessions: 5,          // B1–B5 (may become 4 after the pilot)
     minHoursBetweenSessions: 24,  // protocol: sessions at least 24 h apart (not enforced in dev mode)
 
-    // PLACEHOLDER RULES: check these against the research plan before data collection.
+    // PLACEHOLDER RULE: check against the research plan before data collection.
     // Form alternates by session number: session 1 = A, 2 = B, 3 = A, ...
     formOrder: ["A", "B"],
-    // Test-session order is counterbalanced by participant number:
-    // odd codes (P001, P003, ...) get rest first, even codes get fatigue first.
-    testOrders: [["test-rest", "test-fatigue"], ["test-fatigue", "test-rest"]]
+    // Test-session order: random in blocks of 4 (research plan), pre-generated
+    // in js/forms.js (TEST_ORDER) for participant numbers 1 to maxParticipants.
+    maxParticipants: 400
   },
 
   PVT: {
@@ -100,6 +100,45 @@ const CONFIG = {
     feedbackMs: 800
   },
 
+  // TloadDback: the 16-min cognitive-fatigue task for the T-fatigue session
+  // (Borragan et al., 2016; calibration as in the 2025 TloadDback calibration
+  // study, PMC12330871). Letters and digits alternate on screen:
+  //   letter -> tap SAME if it is the same as the previous letter (1-back)
+  //   digit  -> tap ODD or EVEN (parity)
+  // The pace ("STD": ms per item) is set per person by a calibration at the end
+  // of the LAST TWO baseline sessions (B4 and B5, after the battery); the
+  // T-fatigue session uses the faster pace that passed (2 calibrations, as the
+  // 2025 study recommends). Item streams are pre-generated in js/forms.js.
+  TLOAD: {
+    letters: ["A", "C", "E", "L", "N", "P", "R", "T", "U"],   // as in the 2025 study
+    digits: [1, 2, 3, 4, 6, 7, 8, 9],                          // 1-9 without 5
+    letterTargetRate: 0.25,       // 1 in 4 letters repeats the previous letter (PROPOSAL; not in the papers)
+    weights: { letters: 0.65, digits: 0.35 },   // weighted accuracy, as in the papers
+    blankMs: 100,                 // each item blanks for its last 100 ms, so a repeated character is visibly new
+    // Familiarization (first calibration session only)
+    familiarizationStdMs: 1500,
+    singleTaskItems: 30,          // letters-only block, then digits-only block
+    dualBlockItems: 60,           // 30 letters + 30 digits (also the calibration block size)
+    familiarizationMaxDualBlocks: 5,
+    // Calibration: start at 1400 ms; each block passed -> 100 ms faster. After the
+    // first failed block, go back to the last speed passed and repeat it until it
+    // has been passed 3 times (a failure there -> 100 ms slower). Result = that speed.
+    calibrationStartStdMs: 1400,
+    stepMs: 100,
+    passAccuracy: 0.85,           // weighted accuracy needed to pass a block
+    passesNeeded: 3,
+    minStdMs: 400,                // fastest pace ever used
+    maxStdMs: 1500,               // slowest; if even this is not passed, "calibrated: false" (not excluded by the app)
+    maxCalibrationBlocks: 16,     // safety limit (~15 min)
+    // The fatigue task itself
+    mainMinutes: 16,
+    chunkSeconds: 120,            // saved in 2-min chunks (one data row each, every item inside)
+    // Prespecified compliance rule (applied in the ANALYSIS, recorded here):
+    // the T-fatigue session counts only if weighted accuracy over the 16 min is
+    // at least 70% and there is no 2-minute stretch without a single tap.
+    compliance: { minWeightedAccuracy: 0.70, maxSecondsWithoutTap: 120 }
+  },
+
   // Dev mode (add ?dev=1 to the URL) shortens tasks for quick testing.
   // Every data row records dev=true, so test data can never be mistaken for real data.
   DEV: {
@@ -108,6 +147,9 @@ const CONFIG = {
     flankerTrials: 12,         // first 12 trials of the form
     nbackTrials: 20,           // first 20 trials of the form
     dsstSeconds: 20,
-    stroopTrials: 12
+    stroopTrials: 12,
+    tloadBlockItems: 12,       // familiarization/calibration blocks of 12 instead of 30/60
+    tloadMainSeconds: 40,      // fatigue task 40 s instead of 16 min ...
+    tloadChunkSeconds: 20      // ... in 20 s chunks
   }
 };

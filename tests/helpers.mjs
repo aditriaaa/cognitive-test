@@ -34,7 +34,7 @@ export async function launch() {
 // `rt[task]` ms. Every Nth trial of a task (errorEvery[task]) it answers wrong
 // on purpose. Everything it did is logged in window.__sim.log[task].
 export const DEFAULT_SIM = {
-  rt: { pvt: 300, nback: 400, flanker: 300, dsst: 250, stroop: 300 },
+  rt: { pvt: 300, nback: 400, flanker: 300, dsst: 250, stroop: 300, tload: 200 },
   rtJitter: 0,                                   // + random 0..rtJitter ms (timing runs)
   errorEvery: { nback: 7, flanker: 5, dsst: 5, stroop: 6 },  // 0 = never
   missEvery: { nback: 4, flanker: 7 }            // nback: miss every 4th match; flanker: no tap every 7th trial
@@ -42,15 +42,17 @@ export const DEFAULT_SIM = {
 
 export async function addParticipant(page, sim = DEFAULT_SIM) {
   await page.addInitScript((sim) => {
-    const log = { pvt: [], nback: [], flanker: [], dsst: [], stroop: [] };
+    const log = { pvt: [], nback: [], flanker: [], dsst: [], stroop: [], tload: [] };
     window.__sim = { log };
     const count = { nback: 0, nbackT: 0, flanker: 0, dsst: 0, stroop: 0 };
     const nbackHistory = [];
     const delay = (task) => sim.rt[task] + Math.random() * sim.rtJitter;
-    const tapButton = (pick, ms) => setTimeout(() => {
+    // Aim at the button on screen NOW (like a finger); if that screen is gone
+    // by the time of the tap, the tap goes nowhere.
+    const tapButton = (pick, ms) => {
       const btn = [...document.querySelectorAll(".tc-btn")].find(pick);
-      if (btn) btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
-    }, ms);
+      if (btn) setTimeout(() => { if (btn.isConnected) btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" })); }, ms);
+    };
     const nth = (n, every) => every > 0 && n % every === 0;
 
     new MutationObserver(() => {
@@ -104,6 +106,25 @@ export async function addParticipant(page, sim = DEFAULT_SIM) {
       }
     }).observe(document, { subtree: true, attributes: true, attributeFilter: ["style"], childList: true });
 
+    // TloadDback: answer every item correctly, rt.tload ms after it appears
+    // (unless sim.tloadOff: a test that simulates TloadDback itself).
+    let tloadArea = null, tloadPrev = null;
+    if (!sim.tloadOff) new MutationObserver(() => {
+      const area = document.querySelector(".tload"), el = document.getElementById("tload-item");
+      if (!area || !el) return;
+      if (!el.textContent) { el.dataset.sim = ""; return; }       // the blank between items: next text is a new item
+      if (el.dataset.sim === String(log.tload.length) + el.textContent) return;
+      if (area !== tloadArea) { tloadArea = area; tloadPrev = area.dataset.prev || null; }
+      const c = el.textContent;
+      let answer = null;
+      if (/[A-Z]/.test(c)) { if (c === tloadPrev) answer = "same"; tloadPrev = c; }
+      else answer = Number(c) % 2 ? "odd" : "even";
+      log.tload.push({ c, answer });
+      el.dataset.sim = String(log.tload.length) + c;
+      const b = answer && [...area.querySelectorAll(".tload-btn")].find((x) => x.dataset.v === answer);
+      if (b) setTimeout(() => { if (b.isConnected) b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" })); }, sim.rt.tload);
+    }).observe(document, { subtree: true, childList: true, characterData: true });
+
     // 2-back history restarts with each block (practice and test are separate sequences).
     new MutationObserver(() => {
       const h = document.querySelector("#jspsych-target h2");
@@ -117,10 +138,21 @@ export async function addParticipant(page, sim = DEFAULT_SIM) {
 // until: a CSS selector; stop as soon as it is on screen instead (returns "").
 export async function playSession(page, { maxMinutes = 30, until = null } = {}) {
   const deadline = Date.now() + maxMinutes * 60000;
+  let lastScreen = "", sameSince = Date.now(), reported = false;
   while (Date.now() < deadline) {
+    // Stuck detector: the same screen for over a minute -> describe it once (for debugging).
+    const screen = await page.evaluate(() => (document.getElementById("jspsych-target") || document.body).innerHTML.slice(0, 400)).catch(() => "");
+    if (screen !== lastScreen) { lastScreen = screen; sameSince = Date.now(); reported = false; }
+    else if (!reported && Date.now() - sameSince > 60000) {
+      reported = true;
+      console.log("STUCK for 60 s on this screen:\n" + screen);
+      await page.screenshot({ path: "stuck.png" }).catch(() => {});
+    }
     if (until && await page.locator(until).count()) return "";
     if (await page.locator("#done-btn:visible").count()) return page.locator(".done-screen:visible").innerText();
+    // Task screens (answered by the simulated participant) and timed pauses: just wait.
     if (await page.locator(".tc-area, #pvt-area, .break-count").count()) { await page.waitForTimeout(100); continue; }
+    if (await page.locator("#jspsych-target .jspsych-html-button-response-btngroup:empty").count()) { await page.waitForTimeout(100); continue; }
     if (await page.locator("#vas-track").count()) {
       await page.locator("#vas-track").click();
       await page.click("#vas-continue");

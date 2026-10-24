@@ -32,7 +32,8 @@ const PARAMS = new URLSearchParams(window.location.search);
 // no login, straight into a session, NOTHING uploaded (data stays in this
 // browser's backup copy only), participant code QUICKTEST. Only works on this
 // computer (localhost), never on the hosted site. Always dev mode.
-// Optional: &type=baseline (or test-rest, test-fatigue) and &form=B.
+// Optional: &type=baseline (or test-rest, test-fatigue), &form=B,
+// &calibrate=1 or 2 (TloadDback calibration at the end), &std=900 (T-fatigue pace in ms).
 const QUICK = IS_LOCAL && PARAMS.get("quick") === "1";
 
 const DEV = PARAMS.get("dev") === "1" || USE_EMULATOR || QUICK;
@@ -117,11 +118,15 @@ async function onLogin(e) {
 
 // The full list of session types for one participant, in order, e.g.
 // [familiarization, baseline ×5, test-rest, test-fatigue].
+// Which test session comes first is read from TEST_ORDER (js/forms.js): a
+// random list made in blocks of 4, one entry per participant number
+// ("R" = rest first, "F" = fatigue first). P and D codes have separate lists.
 function sessionPlan(participant_id) {
   const S = CONFIG.SCHEDULE;
   const n = Number(participant_id.slice(1));
-  const testOrder = S.testOrders[(n + 1) % 2]; // odd code → first order, even → second
-  return ["familiarization", ...Array(S.baselineSessions).fill("baseline"), ...testOrder];
+  const order = TEST_ORDER[participant_id[0]][n - 1];
+  const tests = order === "R" ? ["test-rest", "test-fatigue"] : ["test-fatigue", "test-rest"];
+  return ["familiarization", ...Array(S.baselineSessions).fill("baseline"), ...tests];
 }
 
 // Only COMPLETED sessions count. If someone quits halfway, that attempt is kept
@@ -146,8 +151,26 @@ function nextSession(record) {
     number,
     type: plan[number - 1],
     form: S.formOrder[(number - 1) % S.formOrder.length],
+    calibration: calibrationFor(number),
     availableAt
   };
+}
+
+// TloadDback calibration at the end of the LAST TWO baseline sessions (B4 and
+// B5 with 5 baselines): 1 = first calibration (with familiarization), 2 = second.
+// Session 1 is familiarization, so baseline k is session k + 1.
+function calibrationFor(sessionNumber) {
+  const lastBaseline = CONFIG.SCHEDULE.baselineSessions + 1;
+  if (sessionNumber === lastBaseline - 1) return 1;
+  if (sessionNumber === lastBaseline) return 2;
+  return null;
+}
+
+// Rough length shown on the participant home page, in minutes.
+function sessionMinutes(next) {
+  if (next.type === "familiarization") return 30;
+  if (next.type === "test-rest" || next.type === "test-fatigue") return 40;
+  return next.calibration ? 35 : 20;
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +217,7 @@ async function renderDashboard() {
   } else {
     status.innerHTML = `
       <p>Your session is ready.</p>
-      <p class="muted">Find a quiet place where you won't be interrupted, and allow about 15 minutes.</p>
+      <p class="muted">Find a quiet place where you won't be interrupted, and allow about ${sessionMinutes(next)} minutes.</p>
       <button type="button" class="jspsych-btn big-btn" id="start-btn">Start session</button>`;
     const startBtn = document.getElementById("start-btn");
     startBtn.addEventListener("click", async () => {
@@ -300,38 +323,41 @@ const END = {
 
 // Stand-in for the 16-min video / TloadDback task until Milestone 3.
 // It is clearly labelled in the data so it can never pass for the real thing.
-function manipulationPlaceholder(sessionType) {
-  const what = sessionType === "test-rest"
-    ? "the 16-minute neutral video"
-    : "the 16-minute fatigue task (TloadDback)";
+// Stand-in for the 16-min neutral video (T-rest) until a video is chosen.
+// It is clearly labelled in the data so it can never pass for the real thing.
+function manipulationPlaceholder() {
   return {
     type: jsPsychHtmlButtonResponse,
     stimulus: `<h2>Placeholder</h2>
-      <p>In the finished version, ${what} runs here.</p>
+      <p>In the finished version, the 16-minute neutral video plays here.</p>
       <p class="muted">(Built in Milestone 3. Not for real data collection.)</p>`,
     choices: ["Continue"],
     data: { task: "manipulation_placeholder" }
   };
 }
 
-function buildTimeline(jsPsych, sessionType, form) {
-  const isFamiliarization = sessionType === "familiarization";
-  const isTest = sessionType === "test-rest" || sessionType === "test-fatigue";
+// next: { number, type, form, calibration (1, 2 or null), tload ({ std, source }, T-fatigue only) }
+function buildTimeline(jsPsych, next) {
+  const isFamiliarization = next.type === "familiarization";
 
   const timeline = [WELCOME];
   timeline.push(preSessionFacts());
   timeline.push(VAS_INSTRUCTIONS, ...preSessionVas());
 
-  if (isTest) {
-    timeline.push(manipulationPlaceholder(sessionType));
-    timeline.push(postManipulationVas()); // manipulation check
-  }
+  // Test sessions: 16-min fatigue task or video, then the fatigue rating (manipulation check).
+  if (next.type === "test-fatigue") timeline.push(buildTloadMain({ stdMs: next.tload.std, source: next.tload.source }));
+  if (next.type === "test-rest") timeline.push(manipulationPlaceholder());
+  if (next.type === "test-fatigue" || next.type === "test-rest") timeline.push(postManipulationVas());
 
   // The task battery (js/battery.js). Practice only in familiarization;
   // later sessions go straight to the real blocks.
-  timeline.push(buildBattery(jsPsych, { practice: isFamiliarization, form }));
-
+  timeline.push(buildBattery(jsPsych, { practice: isFamiliarization, form: next.form }));
   timeline.push(...postSessionVas());
+
+  // End of baselines 4 and 5: TloadDback calibration, AFTER the battery and its
+  // ratings, so it cannot affect that day's battery data.
+  if (next.calibration) timeline.push(buildTloadCalibration(jsPsych, { which: next.calibration }));
+
   timeline.push(END);
   return timeline;
 }
@@ -378,6 +404,16 @@ async function startSession(account, next) {
   const session_id = makeSessionId(participant_id, next, startDate);
   const target = document.getElementById("jspsych-target");
 
+  // T-fatigue: the pace comes from the calibrations at the end of baselines 4 and 5.
+  if (next.type === "test-fatigue" && !QUICK) {
+    try {
+      next = { ...next, tload: chooseTloadStd(await loadCalibrationResults(participant_id)) };
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
   // Log this attempt online BEFORE the first trial, so an interrupted session
   // still shows up as an incomplete attempt (and trials have a session to go in).
   if (!QUICK) try {
@@ -414,7 +450,7 @@ async function startSession(account, next) {
   if (!QUICK) window.addEventListener("beforeunload", warnOnLeave);
   keepScreenOn();
 
-  jsPsych.run(buildTimeline(jsPsych, next.type, next.form));
+  jsPsych.run(buildTimeline(jsPsych, next));
   return true;
 }
 
@@ -529,7 +565,11 @@ function startQuickSession() {
   const types = ["familiarization", "baseline", "test-rest", "test-fatigue"];
   const type = types.includes(PARAMS.get("type")) ? PARAMS.get("type") : "familiarization";
   const form = PARAMS.get("form") === "B" ? "B" : "A";
-  startSession({ participant_id: "QUICKTEST" }, { number: 0, type, form });
+  // &calibrate=1 or 2: add that TloadDback calibration at the end.
+  const calibration = ["1", "2"].includes(PARAMS.get("calibrate")) ? Number(PARAMS.get("calibrate")) : null;
+  // T-fatigue pace: &std=900 (ms per item), else the slowest pace.
+  const std = Number(PARAMS.get("std")) || CONFIG.TLOAD.maxStdMs;
+  startSession({ participant_id: "QUICKTEST" }, { number: 0, type, form, calibration, tload: { std, source: "quick-test" } });
 }
 
 setup();
