@@ -75,13 +75,13 @@ await dev1.ctx.close();
 // Second device: session 2 is offered again (an unfinished attempt doesn't count).
 const dev2 = await device();
 await loginUi(dev2.page, "p1@test.dev");
-check("second device: session 2 offered again after quitting", (await dashboardText(dev2.page)).includes("Your session is ready"));
+check("second device: session 2 offered again after quitting", (await dashboardText(dev2.page)).includes("Session 2 of 8 is ready"));
 for (let n = 2; n <= 8; n++) {
   await startSession(dev2.page);
   check(`session ${n} (${plan[n - 1]}) saved`, (await playSession(dev2.page)).includes("has been saved"));
   await dev2.page.click("#done-btn:visible");
 }
-check("after 8 sessions the app says finished", (await dashboardText(dev2.page)).includes("completed"));
+check("after 8 sessions the app says finished", (await dashboardText(dev2.page)).includes("completed all 8 sessions"));
 
 const mine = await dev2.page.evaluate((c) => loadSessionRecord(c), code);
 const complete = mine.sessions.filter((s) => s.complete);

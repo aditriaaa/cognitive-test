@@ -77,6 +77,11 @@ async function onSignup(e) {
   if (intakeFields.some((el) => !el.checkValidity())) {
     errors.push("Answer every question under \"About you\" (check that numbers are in a sensible range).");
   }
+  // Before IRB/SRC approval, only dev/test accounts can be made (CONFIG.ENROLLMENT_OPEN).
+  if (!CONFIG.ENROLLMENT_OPEN && !DEV) {
+    errors.length = 0;
+    errors.push("This study isn't open to new participants yet.");
+  }
   showErrors(form, errors);
   if (errors.length) return;
 
@@ -206,17 +211,17 @@ async function renderDashboard() {
   greeting.textContent = `Hi, ${account.first_name}`;
 
   const next = nextSession(record);
-  // Milestone 1: only one session exists, so the text never mentions other sessions.
+  const total = Math.min(sessionPlan(account.participant_id).length, CONFIG.SCHEDULE.sessionsAvailable);
   if (next.finished) {
-    status.innerHTML = `<p>You have completed the session. Thank you for taking part!</p>`;
+    status.innerHTML = `<p>You have completed all ${total} sessions. Thank you for taking part!</p>`;
   } else if (next.availableAt) {
     status.innerHTML = `
-      <p>Thank you! Your next session opens on <b>${next.availableAt.toLocaleString([], {
+      <p>Thank you! Session ${next.number} of ${total} opens on <b>${next.availableAt.toLocaleString([], {
         weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</b>.
       Please come back then.</p>`;
   } else {
     status.innerHTML = `
-      <p>Your session is ready.</p>
+      <p>Session ${next.number} of ${total} is ready.</p>
       <p class="muted">Find a quiet place where you won't be interrupted, and allow about ${sessionMinutes(next)} minutes.</p>
       <button type="button" class="jspsych-btn big-btn" id="start-btn">Start session</button>`;
     const startBtn = document.getElementById("start-btn");
@@ -542,6 +547,11 @@ function setup() {
     if (QUICK) banner.textContent = "QUICK TEST: no login, nothing uploaded";
   }
   document.getElementById("intake-fields").innerHTML = INTAKE_FORM_HTML;
+  // Before IRB/SRC approval: say on the Create account screen that sign-up is closed.
+  if (!CONFIG.ENROLLMENT_OPEN && !DEV) {
+    document.getElementById("signup-form").insertAdjacentHTML("beforebegin",
+      `<p class="errors" id="enrollment-closed">This study isn't open to new participants yet.</p>`);
+  }
 
   // Any button with data-go="signup" etc. switches to that screen.
   document.querySelectorAll("[data-go]").forEach((btn) =>

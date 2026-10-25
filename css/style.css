@@ -386,3 +386,15 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 .tload-same { flex: 1.2; }
 .tload-rules { display: inline-block; text-align: left; border: 2px solid var(--border); border-radius: 12px; padding: 12px 18px; margin: 8px 0 16px; }
 .tload-rules div { margin: 6px 0; }
+
+/* ---------- Timing check page (timing.html) ---------- */
+.timing-flash { width: 120px; height: 60px; border: 2px solid var(--border); margin: 8px 0; }
+.timing-flash.on { background: var(--text); }
+.timing-tap {
+  width: 220px; height: 220px; border-radius: 50%; margin: 16px auto;
+  display: flex; align-items: center; justify-content: center;
+  background: #dde6f5; border: 3px solid var(--accent); font-size: 22px; font-weight: 700;
+  touch-action: none; -webkit-user-select: none; user-select: none;
+}
+.timing-tap.hit { background: var(--accent); color: #fff; }
+.r-table td { white-space: normal; }

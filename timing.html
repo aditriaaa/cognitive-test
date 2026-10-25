@@ -1,0 +1,45 @@
+<!doctype html>
+<!--
+  timing.html: timing check for a device (run it on each study iPad).
+
+  Measures the SOFTWARE side of timing in this browser on this device:
+    1. screen refresh rate and dropped frames
+    2. how late timers fire (they set trial lengths)
+    3. stimulus onset: from "show it" to the screen frame that draws it
+    4. touch: from the touch event being created to the app's code running,
+       and how much later "click" arrives than "pointerdown"
+  It cannot measure the touch screen's own hardware delay (that needs a
+  high-speed camera or similar). Nothing is uploaded; use "Copy results"
+  and paste them into the lab notebook.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Timing check</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/timing-check.js" defer></script>
+</head>
+<body class="researcher">
+  <main class="screen r-wide">
+    <h1>Timing check</h1>
+    <p class="muted">Run this on the iPad itself, in Safari, with other apps closed and the screen on.
+      It checks how precisely this device and browser can show things and register taps.
+      It does not measure the touch screen's own hardware delay.</p>
+
+    <h2>1. Automatic checks <span class="muted">(about 20 seconds; don't touch the screen)</span></h2>
+    <button type="button" class="jspsych-btn" id="run-auto">Run automatic checks</button>
+    <p id="auto-status" class="muted"></p>
+    <div id="flash" class="timing-flash" hidden></div>
+
+    <h2>2. Touch check</h2>
+    <p>Tap the circle 20 times, at any speed.</p>
+    <div class="timing-tap" id="tap-target"><span id="tap-count">0 / 20</span></div>
+
+    <h2>Results</h2>
+    <table class="r-table" id="results"><tbody></tbody></table>
+    <p><button type="button" class="jspsych-btn" id="copy">Copy results</button> <span id="copied" class="muted"></span></p>
+  </main>
+</body>
+</html>

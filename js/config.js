@@ -7,16 +7,19 @@
  * protocol produced which data.
  */
 const CONFIG = {
-  VERSION: "0.4.0-m3", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress)
+  VERSION: "0.5.0-m4", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4)
 
   // Which session comes next is worked out automatically from how many
   // sessions the participant has COMPLETED (see nextSession() in main.js):
   //   session 1 = familiarization, then baselines, then the two test sessions.
+  // ENROLLMENT SWITCH (hard rule 1: no participant data before IRB/SRC approval).
+  // false = the site refuses NEW real (non-dev) sign-ups ("not open yet");
+  // dev/test accounts (?dev=1) still work. Set to true only after approval.
+  ENROLLMENT_OPEN: false,
+
   SCHEDULE: {
-    // Milestone 1: only session 1 (familiarization) is offered. When a
-    // participant finishes it, they are told they are done. Raise this number
-    // to open later sessions once those milestones are built.
-    sessionsAvailable: 1,
+    // How many sessions are offered (all 8 since M4). Lower it only to test.
+    sessionsAvailable: 8,
     baselineSessions: 5,          // B1–B5 (may become 4 after the pilot)
     minHoursBetweenSessions: 24,  // protocol: sessions at least 24 h apart (not enforced in dev mode)
 
