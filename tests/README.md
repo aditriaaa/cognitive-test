@@ -26,7 +26,7 @@ Start the local server first, in its own terminal: `python3 tools/serve.py`
 |---|---|---|---|
 | `npm run test:tasks` | All five tasks in one quick-mode session: order, trials follow the frozen forms, scoring (incl. mistakes and no-taps), reaction-time accuracy, DSST time limit, 2-back pace | server | ~3 min |
 | `npm run test:schedule` | Session plan, counterbalancing, 24-hour lock (with dev mode off) | nothing | 1 s |
-| `npm run test:e2e` | The whole study in the emulator: sign-up, all 8 sessions, quitting and continuing on a second device, uploads, researcher download matches the uploads, security rules refuse 10 kinds of misuse | server + Java | ~8 min |
+| `npm run test:e2e` | The whole study in the emulator: sign-up, all 8 sessions, quitting and continuing on a second device, uploads, researcher download matches the uploads, security rules refuse 10 kinds of misuse; then runs `analysis/check_data.py` on the downloads | server + Java | ~12 min |
 | `npm run test:reset` | Forgot password in the emulator: reset link created, unknown email gets the same message and no link, the new password logs in and the old one is refused | server + Java | ~1 min |
 | `npm run test:calibration` | TloadDback calibration rule: simulated people of known ability end at the right pace; pace choice for T-fatigue | nothing | 1 s |
 | `npm run test:tload` | TloadDback in quick mode: familiarization + calibration lands at the simulated person's limit; the 16-min task (40 s in dev) keeps an exact pace, one continuous stream, every item scored, RT recorded | server | ~6 min |

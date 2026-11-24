@@ -15,6 +15,7 @@
 // For speed, this test opens all 8 sessions and shortens the dev task lengths
 // inside its own browser only (js/config.js is not changed).
 import fs from "fs";
+import { execFileSync } from "child_process";
 import { BASE, IPAD, check, finish, launch, addParticipant, playSession, parseCsv } from "./helpers.mjs";
 
 const EMU = "http://127.0.0.1";
@@ -35,7 +36,10 @@ async function device() {
   return { ctx, page };
 }
 const signUp = (page, email) => page.evaluate((email) => createAccount({ email, password: "password123",
-  first_name: "Testfirst", last_name: "Testlast", intake: { age: "16", colour_blind: "No" }, dev: DEV }), email);
+  first_name: "Testfirst", last_name: "Testlast", dev: DEV,
+  // All 7 intake answers, as the Create account form requires.
+  intake: { age: "16", handedness: "Right", prior_cognitive_tests: "None", video_game_hours_week: "3",
+            typical_sleep_hours: "8", needs_glasses: "No", colour_blind: "No" } }), email);
 async function loginUi(page, email) {
   await page.evaluate(() => show("login"));
   await page.fill("#login-form [name=email]", email);
@@ -112,6 +116,12 @@ const trialsText = fs.readFileSync(await dl.path(), "utf8");
 const trials = parseCsv(trialsText);
 const [dl2] = await Promise.all([r.waitForEvent("download"), r.click("#r-dl-sessions")]);
 const sessions = parseCsv(fs.readFileSync(await dl2.path(), "utf8"));
+const [dl3] = await Promise.all([r.waitForEvent("download"), r.click("#r-dl-intake")]);
+// Keep the three downloads (tests/output/, not in git) for the data check below.
+fs.mkdirSync("tests/output", { recursive: true });
+fs.writeFileSync("tests/output/trials.csv", trialsText);
+fs.copyFileSync(await dl2.path(), "tests/output/sessions.csv");
+fs.copyFileSync(await dl3.path(), "tests/output/intake.csv");
 console.log(`      downloaded ${trials.length} trial rows, ${sessions.length} sessions`);
 
 const bad = [];
@@ -151,6 +161,13 @@ check("T-fatigue: fatigue task comes before the battery", (() => {
   return f.findIndex((t) => t.task === "tload") < f.findIndex((t) => t.task === "pvt");
 })());
 check("no names or emails anywhere in the trial data", !/Testfirst|Testlast|@test\.dev/.test(trialsText));
+
+// analysis/check_data.py: can every planned measure be computed from these downloads?
+let report, ok = true;
+try { report = execFileSync("python3", ["analysis/check_data.py", "tests/output/trials.csv", "tests/output/sessions.csv", "tests/output/intake.csv"], { encoding: "utf8" }); }
+catch (e) { report = e.stdout || e.message; ok = false; }
+console.log(report.split("\n").map((l) => "      | " + l).join("\n"));
+check("data check: everything the analysis needs is in the downloads", ok);
 check("device info on every row", trials.every((t) => t.user_agent && t.screen_w && t.timezone));
 
 // ---------------- Security rules: all must be refused ----------------
