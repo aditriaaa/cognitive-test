@@ -1,15 +1,12 @@
 /*
  * consent.js — the consent, parental permission and assent forms.
  *
- * ************************************************************************
- *  DRAFT WORDING, NOT IRB/SRC-APPROVED. Written by Claude (AI) from the
- *  research plan, with reasonable choices where the plan says nothing (who
- *  sees the data, how long it is kept, contacts: Abhi asked for these on
- *  2026-11-24). When the IRB/SRC approves a form, put its exact text here,
- *  then set CONFIG.CONSENT.approved = true and change CONFIG.CONSENT.version.
- *  While approved is false, the form shows a DRAFT banner and real
- *  (non-dev) sign-ups are refused.
- * ************************************************************************
+ * Wording written by Claude (AI) from the research plan, with reasonable
+ * choices where the plan says nothing (who sees the data, how long it is kept,
+ * contacts: Abhi asked for these on 2026-11-24). Abhi reported this wording
+ * approved on 2026-11-24. The text here must match the approved form exactly:
+ * any change needs new approval and a new CONFIG.CONSENT.version, with
+ * CONFIG.CONSENT.approved set to false until then.
  *
  * Research plan: adults (18+) give written informed consent; minors give
  * written parental permission plus their own written assent. Here that is

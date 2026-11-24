@@ -7,7 +7,7 @@
  * protocol produced which data.
  */
 const CONFIG = {
-  VERSION: "0.6.1", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4); 0.5.1: T-rest video (YouTube, 16 min); 0.5.2: T-rest video = CC BY waterfall video from Wikimedia Commons, plain video player; 0.5.3: forgot password, local session start time recorded; 0.6.0: consent form at sign-up (draft wording); 0.6.1: pastel look around the tasks (task stimuli unchanged)
+  VERSION: "0.6.2", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4); 0.5.1: T-rest video (YouTube, 16 min); 0.5.2: T-rest video = CC BY waterfall video from Wikimedia Commons, plain video player; 0.5.3: forgot password, local session start time recorded; 0.6.0: consent form at sign-up (draft wording); 0.6.1: pastel look around the tasks (task stimuli unchanged); 0.6.2: consent wording marked approved, draft banner off (wording unchanged)
 
   // Which session comes next is worked out automatically from how many
   // sessions the participant has COMPLETED (see nextSession() in main.js):
@@ -18,13 +18,13 @@ const CONFIG = {
   ENROLLMENT_OPEN: false,
 
   // Consent / parental permission / assent (wording in js/consent.js).
-  // approved: false while the wording is a DRAFT: the forms show a DRAFT
-  // banner and real sign-ups are refused even if ENROLLMENT_OPEN is true.
-  // When the IRB/SRC approves the wording, paste it into js/consent.js, set
-  // approved: true and change version (it is saved with every consent).
+  // approved: true since 2026-11-24: Abhi reported the wording approved. If the
+  // wording ever changes, set this back to false (the form then shows a "not
+  // approved" banner and real sign-ups are refused) until the new wording is
+  // approved, and change version (it is saved with every consent).
   CONSENT: {
-    version: "DRAFT-2026-11-24.2",   // .2: one form for everyone; reasonable defaults for storage, retention, contacts
-    approved: false
+    version: "2026-11-24.2",   // same wording as DRAFT-2026-11-24.2
+    approved: true
   },
 
   SCHEDULE: {

@@ -61,7 +61,7 @@ const a = await page("index.html?emulator=1");
 await a.click("text=Create account");
 check("consent form comes first, with NO age question", await a.locator("#consent-form").isVisible() &&
   !(await a.locator("text=How old are you").count()));
-check("DRAFT banner shown while the wording isn't approved", (await text(a, "#consent-draft")).includes("DRAFT"));
+check("no DRAFT banner (wording approved)", !(await a.locator("#consent-draft").isVisible()));
 const formText = await text(a, ".consent-text");
 check("form covers: sessions, fatigue task, risks, no diagnosis, data storage, withdrawal",
   ["8 sessions", "16-minute", "Risks", "diagnosis", "Firebase", "stop at any time", "deleted within one year"].every((w) => formText.includes(w)));
@@ -85,7 +85,7 @@ await fillAccount(a, "noguardian@test.dev", 15);
 let r = await records(a);
 check("account made with no guardian, even at age 15 (no one excluded)", r.research.consent.guardian_permission === false);
 check("research record: version, time, guardian yes/no, and NO names",
-  r.research.consent.version.startsWith("DRAFT-") && r.research.consent.signed_at && !JSON.stringify(r.research).includes("Ada Person"));
+  r.research.consent.version === "2026-11-24.2" && r.research.consent.approved === true && r.research.consent.signed_at && !JSON.stringify(r.research).includes("Ada Person"));
 check("identity record: the participant's signature", r.identity.consent.participant_name === "Ada Person" && !("guardian_name" in r.identity.consent));
 
 // Signs WITH a guardian.
