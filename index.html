@@ -103,7 +103,22 @@
         <input name="password" type="password" autocomplete="current-password" required></label>
       <ul class="errors" aria-live="polite"></ul>
       <button type="submit" class="jspsych-btn big-btn">Login</button>
+      <button type="button" class="link-btn" data-go="reset">Forgot password?</button>
       <button type="button" class="link-btn" data-go="home">Back</button>
+    </form>
+  </main>
+
+  <!-- Forgot password: Firebase emails a link to choose a new password. -->
+  <main id="screen-reset" class="screen" hidden>
+    <h1>Forgot password</h1>
+    <form id="reset-form" class="form" novalidate>
+      <p>Enter the email you signed up with. We'll send you a link to choose a new password.</p>
+      <label>Email
+        <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required></label>
+      <ul class="errors" aria-live="polite"></ul>
+      <p class="reset-sent" id="reset-sent" hidden></p>
+      <button type="submit" class="jspsych-btn big-btn">Send reset link</button>
+      <button type="button" class="link-btn" data-go="login">Back to login</button>
     </form>
   </main>
 

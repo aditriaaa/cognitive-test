@@ -39,7 +39,7 @@ Does comparing a person to their own past performance detect a real change in co
 | `?quick=1` quick test mode (localhost only, added 2026-10-14) | For building tasks: no login, starts a session straight away as `QUICKTEST` (session number 0), nothing uploaded, data only in the browser backup; always dev. `&type=baseline|test-rest|test-fatigue`, `&form=B`. |
 | Plain HTML/JS, no build step | Abhi can read and edit everything; hostable on GitHub Pages |
 
-Open questions: real backend for accounts + data (Firebase/Supabase/DataPipe → OSF; must match the IRB privacy plan, and participants may be minors); online consent/assent (the old researcher consent checkbox was removed with the launcher); how data reaches the researcher (now: researcher.html CSV download; still to describe in the IRB plan); enforcing the same 2-hour time-of-day window (only the 24 h gap is enforced); confirm form and counterbalancing rules; prespecify what happens to Stroop data from participants who answer colour-blind Yes / Not sure.
+Open questions: real backend for accounts + data (Firebase/Supabase/DataPipe → OSF; must match the IRB privacy plan, and participants may be minors); online consent/assent (the old researcher consent checkbox was removed with the launcher); how data reaches the researcher (now: researcher.html CSV download; still to describe in the IRB plan); confirm form and counterbalancing rules; prespecify what happens to Stroop data from participants who answer colour-blind Yes / Not sure.
 
 ## Session structure
 
@@ -73,7 +73,7 @@ Response variability = RT coefficient of variation within each task (no extra ta
 - **Pre-session VAS (every session):** sleep quality, mental fatigue, motivation, stress.
 - **Post-manipulation VAS (test sessions only):** mental fatigue (manipulation check).
 - **Post-session VAS (every session):** effort, distraction.
-- Recorded automatically, not asked: participant ID, session number/type, form, version, dev flag, start/end time.
+- Recorded automatically, not asked: participant ID, session number/type, form, version, dev flag, start/end time (UTC + local clock time + time zone, for the 2-hour window check in the analysis).
 
 Prespecified session exclusions: sleep < 5 h; > 30% of trials missing or anticipatory (RT < 150 ms); logged technical failure; failed TloadDback compliance.
 
@@ -121,6 +121,7 @@ Prespecified session exclusions: sleep < 5 h; > 30% of trials missing or anticip
   - [x] `timing.html` + `js/timing-check.js`: run on each study iPad; measures screen refresh/dropped frames, timer lateness, stimulus-onset-to-frame delay, touch event-to-code delay and click-vs-pointerdown lag; "Copy results" for the lab notebook. Cannot measure touch-screen hardware delay (needs a high-speed camera). Emulated iPad: 59 Hz, 0% dropped, timers <= 2 ms late, onset 6.5 ms mean, touch handling < 1 ms.
   - [ ] GitHub Pages: repo is public; Abhi enables Pages (Settings -> Pages -> Deploy from branch main / root) and adds `aditriaaa.github.io` to Firebase Auth -> Settings -> Authorized domains. `.nojekyll` added so files are served as-is. Site: https://aditriaaa.github.io/cognitive-test/
   - [ ] `git tag v1.0-pilot`: ONLY when the protocol is final (mentor-confirmed numbers, video chosen, IRB/SRC approved); then set ENROLLMENT_OPEN to true in the same tagged version.
+- [x] **0.5.3-m4 (2026-11-23): forgot password + time of day.** "Forgot password?" on the login screen -> `screen-reset` -> `sendPasswordReset()` (storage.js) = Firebase's own reset email (Firebase hosts the new-password page; this site never sees passwords); same message whether or not the email has an account (no enumeration). The email's wording/sender can be edited in the Firebase console (Authentication -> Templates -> Password reset). `npm run test:reset` 10/10 (emulator: link created, unknown email gets same message and no link, new password works, old refused). Time of day: Abhi chose RECORD ONLY (no blocking/warning): every row now has `session_start_local` ("YYYY-MM-DD HH:MM:SS", device time) next to `session_start` (UTC) and `timezone`; the "same 2-hour window" is checked in the analysis. Tasks test 22/22 (local time matches UTC start).
 - [x] **Clean-up (2026-11-23):** schedule rules moved from main.js to `js/schedule.js` (the schedule test now loads it instead of cutting functions out of main.js's text); developer tools (quick mode, broken-account tools) moved to `js/dev-tools.js`, so main.js is only the participant app; `startSession` reads plainly (one `online` flag instead of scattered QUICK checks); TloadDback block builders take values or functions directly (no build-then-overwrite); session-done screens in one table; tests reuse helpers.playSession. No behaviour change.
 
 ## Repo layout

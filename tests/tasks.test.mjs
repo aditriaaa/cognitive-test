@@ -34,6 +34,12 @@ check("every row labelled QUICKTEST, form A, dev, current version", rows.every((
   r.participant_id === "QUICKTEST" && r.form === "A" && r.dev === "true" && r.version === version), version);
 
 check("trial_index runs 0, 1, 2, ... with no gaps", rows.every((r, i) => Number(r.trial_index) === i));
+// Local start time (for the "same 2-hour window" check in the analysis) = the UTC start shown in local time.
+const localOk = rows.every((r) => {
+  const d = new Date(r.session_start), p = (n) => String(n).padStart(2, "0");
+  return r.session_start_local === `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+});
+check("every row has the local start time, matching the UTC start", localOk, rows[0].session_start_local + " (" + rows[0].timezone + ")");
 
 // ---- PVT ----
 const pvt = of("pvt").filter((r) => r.outcome === "response");

@@ -41,12 +41,13 @@ const DEV = PARAMS.get("dev") === "1" || USE_EMULATOR || QUICK;
 // Screens
 // ---------------------------------------------------------------------------
 
-const SCREENS = ["home", "signup", "login", "dashboard"];
+const SCREENS = ["home", "signup", "login", "reset", "dashboard"];
 
 function show(name) {
   for (const s of SCREENS) document.getElementById("screen-" + s).hidden = s !== name;
   document.getElementById("jspsych-target").hidden = true;
   document.querySelectorAll(".errors").forEach((ul) => { ul.innerHTML = ""; });
+  document.getElementById("reset-sent").hidden = true;
   window.scrollTo(0, 0);
   if (name === "dashboard") renderDashboard();
 }
@@ -111,6 +112,28 @@ async function onLogin(e) {
   if (!result.ok) return showErrors(form, [result.error]);
   form.reset();
   show("dashboard");
+}
+
+// ---------------------------------------------------------------------------
+// Forgot password
+// ---------------------------------------------------------------------------
+
+async function onResetPassword(e) {
+  e.preventDefault();
+  const form = e.target;
+  const sent = document.getElementById("reset-sent");
+  sent.hidden = true;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim())) return showErrors(form, ["Enter a valid email address."]);
+  const button = form.querySelector("button[type=submit]");
+  button.disabled = true;
+  const result = await sendPasswordReset(form.email.value);
+  button.disabled = false;
+  if (!result.ok) return showErrors(form, [result.error]);
+  showErrors(form, []);
+  // Same message whether or not the email has an account.
+  sent.textContent = "If there is an account for this email, a link to reset the password is on its way. " +
+    "Check your inbox (and spam folder), then come back and log in.";
+  sent.hidden = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +276,12 @@ function makeSessionId(participant_id, next, startDate) {
   return `${DEV ? "DEV_" : ""}${participant_id}_S${p(next.number)}_${next.type}_${stamp}`;
 }
 
+// "YYYY-MM-DD HH:MM:SS" in the device's own time zone.
+function localDateTime(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 // Columns added to EVERY row of the data. Participant code only: never name or email.
 function rowMetadata(participant_id, next, startDate) {
   return {
@@ -262,8 +291,12 @@ function rowMetadata(participant_id, next, startDate) {
     form: next.form,
     version: CONFIG.VERSION,
     dev: DEV,
-    session_start: startDate.toISOString(),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // to recover local time of day
+    session_start: startDate.toISOString(),                     // UTC
+    // Local clock time the session started, e.g. "2026-11-23 19:04:12", for
+    // checking the protocol's "same 2-hour time-of-day window" in the analysis
+    // (recorded only; the app does not enforce it).
+    session_start_local: localDateTime(startDate),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     // Device info: at home everyone uses their own device, so this records which. Not personal data.
     user_agent: navigator.userAgent,
     screen_w: window.screen.width,
@@ -422,6 +455,7 @@ function setup() {
 
   document.getElementById("signup-form").addEventListener("submit", onSignup);
   document.getElementById("login-form").addEventListener("submit", onLogin);
+  document.getElementById("reset-form").addEventListener("submit", onResetPassword);
   document.getElementById("logout-btn").addEventListener("click", async () => {
     await logout();
     show("home");

@@ -102,6 +102,19 @@ async function login(email, password) {
   }
 }
 
+// Sends Firebase's password-reset email (Firebase hosts the page where the new
+// password is typed; this site never sees it). The reply is the same whether
+// or not the email has an account, so the page can't reveal who is in the study.
+// Returns { ok: true } or { ok: false, error }.
+async function sendPasswordReset(email) {
+  try {
+    await fbAuth.sendPasswordResetEmail(email.trim());
+  } catch (err) {
+    if (err.code !== "auth/user-not-found") return { ok: false, error: friendlyAuthError(err) };
+  }
+  return { ok: true };
+}
+
 function logout() { return fbAuth.signOut(); }
 
 // Firebase restores a login asynchronously on page load; wait for it once.
