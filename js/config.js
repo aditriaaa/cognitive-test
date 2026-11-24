@@ -7,7 +7,7 @@
  * protocol produced which data.
  */
 const CONFIG = {
-  VERSION: "0.6.0", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4); 0.5.1: T-rest video (YouTube, 16 min); 0.5.2: T-rest video = CC BY waterfall video from Wikimedia Commons, plain video player; 0.5.3: forgot password, local session start time recorded; 0.6.0: consent / parental permission / assent at sign-up (draft wording)
+  VERSION: "0.6.1", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4); 0.5.1: T-rest video (YouTube, 16 min); 0.5.2: T-rest video = CC BY waterfall video from Wikimedia Commons, plain video player; 0.5.3: forgot password, local session start time recorded; 0.6.0: consent form at sign-up (draft wording); 0.6.1: pastel look around the tasks (task stimuli unchanged)
 
   // Which session comes next is worked out automatically from how many
   // sessions the participant has COMPLETED (see nextSession() in main.js):

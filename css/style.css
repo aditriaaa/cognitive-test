@@ -6,16 +6,54 @@
  *   - No accidental text selection, zoom, or "rubber-band" scrolling.
  *   - The SAME look every session, so the light theme is forced even if the
  *     iPad is set to dark mode.
+ *   - A soft pastel look (purple, yellow, blue, pink, green) for everything
+ *     AROUND the tasks: home, consent, sign-up, questions, instructions, breaks.
+ *   - The TASK SCREENS keep their own fixed colours and font (--task-*
+ *     below, PVT black, Stroop dark): they are the stimuli, part of the
+ *     protocol, and must look the same for everyone and in every version.
  */
+
+/* Fonts, stored in vendor/fonts (works offline; both free, SIL Open Font License).
+   Text uses Agrave Pro. Both fonts: SIL Open Font License, saved in vendor/fonts. */
+@font-face {
+  font-family: "Bubblegum Sans";
+  src: url("../vendor/fonts/BubblegumSans-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Agrave Pro";
+  src: url("../vendor/fonts/AgravePro-Variable.ttf") format("truetype");
+  font-weight: 100 700;
+  font-display: swap;
+}
 
 :root {
   color-scheme: light;
-  --bg: #ffffff;
-  --text: #1a1a1a;
-  --muted: #666666;
-  --accent: #1f5fbf;
-  --error: #b00020;
-  --border: #c8c8c8;
+  /* Pastel theme (app screens) */
+  --bg: #fbf8ff;
+  --bg-gradient: linear-gradient(160deg, #ffdfec 0%, #fff2c9 24%, #e9deff 50%, #d9ebff 75%, #d9f4e1 100%);
+  --surface: rgba(255, 255, 255, 0.82);
+  --text: #3a3450;             /* dark plum: readable on every pastel */
+  --heading: #5b4a8b;
+  --muted: #6d6585;
+  --accent: #6f52b5;           /* links and focus: purple, 5:1 on white */
+  --error: #b3261e;
+  --border: #d8cdea;
+  --lavender: #dccdf7;  --lavender-edge: #b59be6;
+  --sky: #cbe4ff;       --sky-edge: #8fbcef;
+  --blush: #ffd5e5;     --blush-edge: #f0a3c2;
+  --butter: #fff1b5;    --butter-edge: #e8cf6a;
+  --mint: #cff0d9;      --mint-edge: #8fd1a5;
+  --font-heading: "Bubblegum Sans", -apple-system, sans-serif;
+  --font-text: "Agrave Pro", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  /* Task screens: FIXED, not part of the theme (stimuli = protocol) */
+  --task-bg: #ffffff;
+  --task-ink: #1a1a1a;
+  --task-border: #c8c8c8;
+  --task-btn: #f4f4f4;
+  --task-pressed: #dde6f5;
+  --task-accent: #1f5fbf;
+  --task-font: -apple-system, "Helvetica Neue", Arial, sans-serif;
   --pvt-bg: #000000;
   --pvt-box: #1c1c1c;
   --pvt-digits: #ffd400;
@@ -23,15 +61,20 @@
 
 html, body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   background: var(--bg);
   color: var(--text);
   overscroll-behavior: none;        /* no rubber-band bounce */
   -webkit-text-size-adjust: 100%;   /* iPad must not resize text on rotate */
 }
+/* The pastel gradient sits on a fixed layer (iPad Safari ignores
+   background-attachment: fixed). */
+body { background: transparent; }   /* html carries the plain colour; the gradient layer shows through */
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: var(--bg-gradient); }
 
 body {
-  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-text);
+  font-weight: 500;                 /* Agrave Pro is thin at 400 */
   font-size: 20px;
   line-height: 1.5;
   /* No text selection or long-press menus during tasks. */
@@ -48,8 +91,10 @@ input, select, textarea {
   user-select: text;
 }
 
-h1 { font-size: 1.8em; margin: 0.4em 0; }
-h2 { font-size: 1.5em; margin: 0.4em 0; }
+h1, h2, h3, legend { font-family: var(--font-heading); font-weight: 400; color: var(--heading); letter-spacing: 0.02em; }
+h1 { font-size: 2.1em; margin: 0.3em 0; }
+h2 { font-size: 1.7em; margin: 0.4em 0; }
+h3 { font-size: 1.3em; }
 .muted { color: var(--muted); }
 
 /* ---------- Dev banner ---------- */
@@ -60,23 +105,30 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   right: 0;
   z-index: 1000;
   padding: 4px 12px;
-  background: #d32f2f;
+  background: #d9577f;              /* stays loud on purpose: test data must be obvious */
   color: #fff;
   font-size: 14px;
   font-weight: 700;
+  border-bottom-left-radius: 10px;
   pointer-events: none;             /* never blocks a tap underneath */
 }
 
 /* ---------- App screens (home, create account, login, participant home) ---------- */
 
+/* Each screen is a soft white card on the pastel background. */
 .screen {
   max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
+  margin: 24px auto;
+  padding: 24px 24px 40px;
+  background: var(--surface);
+  border-radius: 28px;
+  box-shadow: 0 8px 30px rgba(111, 82, 181, 0.12);
+  box-sizing: border-box;
 }
+@media (max-width: 680px) { .screen { margin: 12px; padding: 20px 16px 32px; } }
 .screen[hidden] { display: none; }
 
-.home { text-align: center; padding-top: 18vh; }
+.home { text-align: center; margin-top: 14vh; }
 .home h1 .muted { display: block; font-size: 0.55em; font-weight: 400; }
 .home-buttons { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 32px; }
 .home-buttons .big-btn { min-width: 280px; }
@@ -95,7 +147,9 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 
 .errors {
   color: var(--error);
-  padding-left: 1.2em;
+  background: #ffe9ef;
+  border-radius: 12px;
+  padding: 8px 12px 8px 2em;
 }
 .errors:empty { display: none; }
 
@@ -114,20 +168,43 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   line-height: 1.5;
 }
 
-.jspsych-content { max-width: 760px; }
+/* Instruction, question and rating screens: a white card. (Task screens are
+   full-screen layers with their own fixed look.) */
+.jspsych-content {
+  max-width: 760px;
+  background: var(--surface);
+  border-radius: 28px;
+  padding: 20px 28px 28px;
+  box-shadow: 0 8px 30px rgba(111, 82, 181, 0.12);
+  box-sizing: border-box;
+}
 
-/* Buttons: large and easy to hit. */
+/* Buttons: large and easy to hit; pastel lavender by default. */
 .jspsych-btn {
   font-family: inherit;             /* same font as the text, not jsPsych's default */
   font-size: 22px;
+  font-weight: 700;
   min-height: 56px;
   min-width: 160px;
   padding: 12px 28px;
-  border-radius: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--lavender-edge);
+  background: var(--lavender);
+  color: var(--text);
   touch-action: manipulation;
+  box-shadow: 0 3px 0 var(--lavender-edge);
 }
+.jspsych-btn:hover { filter: brightness(1.03); }
+.jspsych-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lavender-edge); }
 .big-btn { font-size: 24px; min-height: 64px; min-width: 220px; margin-top: 24px; }
-.jspsych-btn:disabled { opacity: 0.35; }
+.jspsych-btn:disabled { opacity: 0.5; background: var(--lavender); border-color: var(--lavender-edge); color: var(--text); }
+/* Home page: one colour per button. */
+.home-buttons .jspsych-btn:nth-child(1) { background: var(--blush); border-color: var(--blush-edge); box-shadow: 0 3px 0 var(--blush-edge); }
+.home-buttons .jspsych-btn:nth-child(2) { background: var(--sky); border-color: var(--sky-edge); box-shadow: 0 3px 0 var(--sky-edge); }
+/* Other places where a different pastel helps tell buttons apart. */
+#start-btn, #rv-start { background: var(--mint); border-color: var(--mint-edge); box-shadow: 0 3px 0 var(--mint-edge); }
+#done-btn { background: var(--sky); border-color: var(--sky-edge); box-shadow: 0 3px 0 var(--sky-edge); }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- Questionnaire forms (.form) ---------- */
 
@@ -157,13 +234,14 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   font-family: inherit;
   min-height: 52px;
   padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
   background: #fff;
   color: var(--text);
   box-sizing: border-box;
   width: 100%;
 }
+.form input:focus, .form select:focus { border-color: var(--lavender-edge); }
 .form select { -webkit-appearance: none; appearance: none; }
 
 .form .hint { font-size: 15px; color: var(--muted); }
@@ -192,7 +270,7 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   left: 0; right: 0; top: 50%;
   height: 4px;
   margin-top: -2px;
-  background: var(--text);
+  background: var(--task-ink);
 }
 /* Short end caps mark where the line stops. No ticks or numbers in between. */
 .vas-end {
@@ -201,7 +279,7 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   width: 4px;
   height: 28px;
   margin-top: -14px;
-  background: var(--text);
+  background: var(--task-ink);
 }
 .vas-end-left { left: 0; }
 .vas-end-right { right: 0; }
@@ -238,6 +316,8 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   inset: 0;
   z-index: 10;
   background: var(--pvt-bg);
+  font-family: var(--task-font);
+  font-weight: 400;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -272,6 +352,10 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   max-width: 640px;
   margin: 10vh auto 0;
   text-align: center;
+  background: var(--surface);
+  border-radius: 28px;
+  padding: 28px 24px 36px;
+  box-shadow: 0 8px 30px rgba(111, 82, 181, 0.12);
 }
 
 /* ---------- Researcher page (researcher.html) ---------- */
@@ -285,7 +369,7 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 .r-table-wrap { overflow-x: auto; }   /* wide table scrolls by itself, not the page */
 .r-table { border-collapse: collapse; width: 100%; font-size: 15px; }
 .r-table th, .r-table td { border-bottom: 1px solid var(--border); padding: 6px 10px; text-align: left; white-space: nowrap; }
-.r-table th { position: sticky; top: 0; background: var(--bg); }
+.r-table th { position: sticky; top: 0; background: var(--lavender); color: var(--text); }
 .r-incomplete td { color: var(--muted); }
 
 /* ---------- Tap-choice tasks: flanker, 2-back, Stroop (js/plugin-touch-choice.js) ---------- */
@@ -295,7 +379,10 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   position: fixed;
   inset: 0;
   z-index: 10;
-  background: var(--bg);
+  background: var(--task-bg);
+  color: var(--task-ink);
+  font-family: var(--task-font);     /* stimuli keep their font (protocol) */
+  font-weight: 400;
   display: flex;
   flex-direction: column;
   touch-action: none;
@@ -306,10 +393,10 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   place-items: center;
 }
 .tc-stage > * { grid-area: 1 / 1; }
-.tc-fixation { font-size: 56px; color: var(--text); }
+.tc-fixation { font-size: 56px; color: var(--task-ink); }
 .tc-feedback { font-size: 34px; font-weight: 700; }
 .tc-good { color: #1b7f3b; }
-.tc-bad { color: var(--error); }
+.tc-bad { color: #b00020; }
 .tc-buttons {
   display: flex;
   gap: 16px;
@@ -318,20 +405,20 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 .tc-btn {
   flex: 1;
   min-height: 120px;                /* big targets: easy to hit without looking */
-  border: 2px solid var(--border);
+  border: 2px solid var(--task-border);
   border-radius: 16px;
-  background: #f4f4f4;
-  color: var(--text);
+  background: var(--task-btn);
+  color: var(--task-ink);
   font-size: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.tc-btn.tc-pressed { background: #dde6f5; border-color: var(--accent); }
+.tc-btn.tc-pressed { background: var(--task-pressed); border-color: var(--task-accent); }
 
 /* Flanker arrows */
 /* Arrows shrink on narrow screens (phones) so the row never touches the edges. */
-.flanker-row { display: flex; gap: min(14px, 3vw); color: var(--text); }
+.flanker-row { display: flex; gap: min(14px, 3vw); color: var(--task-ink); }
 .flanker-row svg { width: min(64px, 14vw); height: auto; }
 .flanker-example .flanker-row { justify-content: center; transform: scale(0.7); }
 
@@ -339,11 +426,11 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 .break-count { font-size: 48px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* 2-back letters */
-.nback-letter { font-size: min(140px, 30vw); font-weight: 700; color: var(--text); line-height: 1; }
+.nback-letter { font-size: min(140px, 30vw); font-weight: 700; color: var(--task-ink); line-height: 1; }
 .nback-example { margin: 20px 0; }
 .nback-example span {
   display: inline-block; width: 1.6em; padding: 4px 0; margin: 0 3px;
-  border: 2px solid var(--border); border-radius: 8px; font-size: 28px; font-weight: 700;
+  border: 2px solid var(--task-border); border-radius: 8px; font-size: 28px; font-weight: 700;
 }
 .nback-example span.hit { border-color: var(--accent); background: #dde6f5; }
 
@@ -353,12 +440,12 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 /* DSST: key at the top, symbol in the middle, keypad 1-9 at the bottom */
 .dsst-key { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; }
 .dsst-cell {
-  width: min(72px, 10vw); border: 2px solid var(--border); border-radius: 8px;
-  display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; color: var(--text);
+  width: min(72px, 10vw); border: 2px solid var(--task-border); border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; color: var(--task-ink);
 }
 .dsst-cell svg { width: min(40px, 6vw); height: auto; }
-.dsst-digit { font-size: 22px; font-weight: 700; border-bottom: 1px solid var(--border); width: 100%; text-align: center; margin-bottom: 4px; }
-.dsst-probe { color: var(--text); }
+.dsst-digit { font-family: var(--task-font); color: var(--task-ink); font-size: 22px; font-weight: 700; border-bottom: 1px solid var(--task-border); width: 100%; text-align: center; margin-bottom: 4px; }
+.dsst-probe { color: var(--task-ink); }
 .dsst .tc-buttons { gap: 8px; }
 .dsst .tc-btn { font-size: 34px; font-weight: 700; min-height: 110px; }
 #jspsych-target .dsst-key { margin: 16px 0; }
@@ -379,12 +466,12 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 
 /* TloadDback (js/plugin-tload.js): item in the middle; SAME LETTER on the left
    (left hand), ODD / EVEN on the right (right hand), like the keyboard version. */
-.tload-item { font-size: min(150px, 30vw); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.tload-item { font-size: min(150px, 30vw); font-weight: 700; color: var(--task-ink); font-variant-numeric: tabular-nums; }
 .tload-buttons { align-items: stretch; }
 .tload-buttons .tload-gap { flex: 0.6; }
 .tload-btn { font-size: 26px; font-weight: 700; line-height: 1.2; }
 .tload-same { flex: 1.2; }
-.tload-rules { display: inline-block; text-align: left; border: 2px solid var(--border); border-radius: 12px; padding: 12px 18px; margin: 8px 0 16px; }
+.tload-rules { display: inline-block; text-align: left; border: 2px solid var(--butter-edge); background: #fffbe6; border-radius: 14px; padding: 12px 18px; margin: 8px 0 16px; }
 .tload-rules div { margin: 6px 0; }
 
 /* ---------- Timing check page (timing.html) ---------- */
@@ -412,15 +499,15 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 .rv-credit { font-size: 12px; color: #888; }
 
 /* Forgot-password confirmation */
-.reset-sent { background: #e8f3ea; border: 1px solid #9ccfa6; border-radius: 8px; padding: 10px 12px; }
+.reset-sent { background: var(--mint); border: 2px solid var(--mint-edge); border-radius: 14px; padding: 10px 14px; }
 
 /* ---------- Consent / permission / assent (main.js, js/consent.js) ---------- */
 .consent-draft {
-  background: #fff3cd; border: 2px solid #d39e00; color: #6b4e00; border-radius: 8px;
+  background: var(--butter); border: 2px solid var(--butter-edge); color: #5d4a00; border-radius: 14px;
   padding: 8px 12px; font-weight: 700; margin-bottom: 12px;
 }
 .consent-text {
-  border: 1px solid var(--border); border-radius: 8px; padding: 4px 16px 12px;
+  border: 2px solid var(--border); border-radius: 14px; padding: 4px 16px 12px; background: #fff;
   max-height: 55vh; overflow-y: auto; -webkit-user-select: text; user-select: text;
   font-size: 18px;
 }
@@ -434,6 +521,6 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
   .dev-banner, #consent-step form, #consent-print, .link-btn { display: none !important; }
   .consent-text { max-height: none; overflow: visible; border: none; }
 }
-.consent-guardian { border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px 12px; margin: 8px 0; }
+.consent-guardian { border: 2px solid var(--sky-edge); border-radius: 14px; padding: 8px 14px 12px; margin: 8px 0; background: #f3f9ff; }
 .consent-guardian legend { font-weight: 700; padding: 0 6px; }
 .consent-guardian p { margin: 4px 0 10px; font-size: 16px; }
