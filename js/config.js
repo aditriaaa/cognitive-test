@@ -7,7 +7,7 @@
  * protocol produced which data.
  */
 const CONFIG = {
-  VERSION: "0.5.0-m4", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4)
+  VERSION: "0.5.2-m4", // 0.2.0: at-home accounts; 0.2.1: follow-ups only after "Yes", session 1 only; 0.2.2: caffeine detail split into "what" + "how much"; 0.3.0: battery of several tasks (M2, in progress); 0.3.1: intake asks about colour blindness, flanker 220 trials (~4 min); 0.4.0: TloadDback calibration (end of B4, B5) + 16-min fatigue task, test order random in blocks of 4 (M3, in progress); 0.5.0: all 8 sessions open, enrollment switch (M4); 0.5.1: T-rest video (YouTube, 16 min); 0.5.2: T-rest video = CC BY waterfall video from Wikimedia Commons, plain video player
 
   // Which session comes next is worked out automatically from how many
   // sessions the participant has COMPLETED (see nextSession() in main.js):
@@ -142,6 +142,28 @@ const CONFIG = {
     compliance: { minWeightedAccuracy: 0.70, maxSecondsWithoutTap: 120 }
   },
 
+  // Neutral video for the T-rest session (plan: "a neutral 16-minute nature
+  // video, so both test sessions are equal in length"). The first 16 minutes
+  // of a calm 3-hour video of a small waterfall (Alsea Falls, Oregon) with
+  // natural sound, streamed from Wikimedia Commons (no ads, no tracking).
+  // LICENCE: CC BY 3.0, author "MoneySavingVideos" (original on YouTube,
+  // 2012): free to use with credit, so the credit line below is shown under
+  // the video and must also be cited in the methods.
+  // Commons page: https://commons.wikimedia.org/wiki/File:%E2%99%A5%E2%99%A5_Very_Relaxing_3_Hour_Video_of_SMALL_Waterfall.webm
+  // The 16 minutes are counted in VIDEO time, so loading pauses don't shorten it.
+  REST_VIDEO: {
+    // Versions made by Commons, best first; the iPad plays the first it supports
+    // (WebM: Safari on iPadOS 17.4+; the 360p QuickTime file is the fallback).
+    sources: [
+      { src: "https://upload.wikimedia.org/wikipedia/commons/transcoded/0/03/%E2%99%A5%E2%99%A5_Very_Relaxing_3_Hour_Video_of_SMALL_Waterfall.webm/%E2%99%A5%E2%99%A5_Very_Relaxing_3_Hour_Video_of_SMALL_Waterfall.webm.480p.vp9.webm", type: 'video/webm; codecs="vp9, opus"' },
+      { src: "https://upload.wikimedia.org/wikipedia/commons/transcoded/0/03/%E2%99%A5%E2%99%A5_Very_Relaxing_3_Hour_Video_of_SMALL_Waterfall.webm/%E2%99%A5%E2%99%A5_Very_Relaxing_3_Hour_Video_of_SMALL_Waterfall.webm.360p.mpeg4.mov", type: "video/quicktime" }
+    ],
+    credit: "Video: &ldquo;Very Relaxing 3 Hour Video of SMALL Waterfall&rdquo; by MoneySavingVideos, CC BY 3.0, via Wikimedia Commons.",
+    startSeconds: 0,             // from the beginning ...
+    watchSeconds: 960,           // ... to 16:00
+    maxWallMinutes: 30           // safety net: if it can't play, move on after 30 min (logged)
+  },
+
   // Dev mode (add ?dev=1 to the URL) shortens tasks for quick testing.
   // Every data row records dev=true, so test data can never be mistaken for real data.
   DEV: {
@@ -153,6 +175,7 @@ const CONFIG = {
     stroopTrials: 12,
     tloadBlockItems: 12,       // familiarization/calibration blocks of 12 instead of 30/60
     tloadMainSeconds: 40,      // fatigue task 40 s instead of 16 min ...
-    tloadChunkSeconds: 20      // ... in 20 s chunks
+    tloadChunkSeconds: 20,     // ... in 20 s chunks
+    restVideoSeconds: 15       // rest video: 15 s instead of 16 min
   }
 };

@@ -132,8 +132,10 @@ const unfinished = trials.filter((t) => t.session_complete === "false");
 check("unfinished session: the trials done before quitting are kept", unfinished.length > 0 && unfinished.every((t) => t.session_number === "2"), `${unfinished.length} rows`);
 check("practice only in session 1", trials.some((t) => t.session_type === "familiarization" && t.phase === "practice") &&
   !trials.some((t) => t.session_type !== "familiarization" && t.phase === "practice"));
-check("T-rest has the video step (placeholder until a video is chosen)",
-  trials.some((t) => t.session_type === "test-rest" && t.task === "manipulation_placeholder"));
+const video = trials.find((t) => t.session_type === "test-rest" && t.task === "rest_video");
+check("T-rest: the video played to its end point, before the battery", video && video.ended_by === "reached the end point" &&
+  (() => { const r = trials.filter((t) => t.session_type === "test-rest"); return r.findIndex((t) => t.task === "rest_video") < r.findIndex((t) => t.task === "pvt"); })(),
+  video && `${video.video_seconds_watched} s of video, ${video.wall_seconds} s real time`);
 // TloadDback: calibrations at the end of baselines 4 and 5 (sessions 5 and 6), used by T-fatigue.
 const results = trials.filter((t) => t.task === "tload_calibration_result");
 check("calibration results saved in sessions 5 and 6 only", results.map((t) => t.session_number).join() === "5,6",

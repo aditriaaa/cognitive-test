@@ -2,22 +2,17 @@
 //
 // Run:  npm run test:schedule   (no server or emulator needed)
 //
-// Takes the real sessionPlan() and nextSession() functions out of js/main.js
-// and runs them on made-up session histories.
+// Runs the real schedule rules (js/schedule.js) on made-up session histories.
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { check, finish } from "./helpers.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const main = fs.readFileSync(path.join(root, "js/main.js"), "utf8");
-const grab = (name) => {
-  const start = main.indexOf(`function ${name}(`);
-  return main.slice(start, main.indexOf("\n}\n", start) + 2);
-};
+const read = (f) => fs.readFileSync(path.join(root, f), "utf8");
+// The real rules: js/config.js + js/forms.js + js/schedule.js, with dev mode off.
 const { CONFIG, TEST_ORDER, sessionPlan, nextSession } = new Function(
-  fs.readFileSync(path.join(root, "js/config.js"), "utf8") + fs.readFileSync(path.join(root, "js/forms.js"), "utf8") +
-  "\nconst DEV = false;\n" + grab("sessionPlan") + grab("nextSession") + grab("calibrationFor") +
+  read("js/config.js") + read("js/forms.js") + "\nconst DEV = false;\n" + read("js/schedule.js") +
   "\nreturn { CONFIG, TEST_ORDER, sessionPlan, nextSession };")();
 CONFIG.SCHEDULE.sessionsAvailable = 8; // as it will be once all sessions are open
 

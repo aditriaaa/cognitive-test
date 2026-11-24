@@ -29,6 +29,7 @@ Start the local server first, in its own terminal: `python3 tools/serve.py`
 | `npm run test:e2e` | The whole study in the emulator: sign-up, all 8 sessions, quitting and continuing on a second device, uploads, researcher download matches the uploads, security rules refuse 10 kinds of misuse | server + Java | ~8 min |
 | `npm run test:calibration` | TloadDback calibration rule: simulated people of known ability end at the right pace; pace choice for T-fatigue | nothing | 1 s |
 | `npm run test:tload` | TloadDback in quick mode: familiarization + calibration lands at the simulated person's limit; the 16-min task (40 s in dev) keeps an exact pace, one continuous stream, every item scored, RT recorded | server | ~6 min |
+| `npm run test:video` | T-rest video in Chromium and WebKit (15 s in dev): the Commons video loads with its licence credit, plays to the end point in video time, a tap doesn't pause it, data row saved. Needs internet | server | ~1 min |
 | `npm run timing` | How long the real-length battery takes (a measurement, not pass/fail) | server | ~20 min |
 
 Each test prints one PASS/FAIL line per check and a total at the end.

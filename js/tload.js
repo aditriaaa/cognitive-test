@@ -19,25 +19,36 @@ const TLOAD_RULES = `
     <div><b>Number:</b> tap <b>ODD</b> or <b>EVEN</b>.</div>
   </div>`;
 
-const tloadScreen = (html, button = "Start", task = "instructions") => ({
-  type: jsPsychHtmlButtonResponse, stimulus: html, choices: [button], data: { task }
+// A text screen with one button. `stimulus` may be a function, worked out
+// when the screen appears (e.g. to show the last block's score).
+const tloadScreen = (stimulus, button = "Start", task = "instructions") => ({
+  type: jsPsychHtmlButtonResponse, stimulus, choices: [button], data: { task }
 });
 
-// Pause between blocks: moves on by itself after `seconds`.
-const tloadPause = (html, seconds) => ({
-  type: jsPsychHtmlButtonResponse, stimulus: html, choices: [], trial_duration: seconds * 1000,
+// A pause that moves on by itself.
+const tloadPause = (stimulus, durationMs) => ({
+  type: jsPsychHtmlButtonResponse, stimulus, choices: [], trial_duration: durationMs,
   data: { task: "tload_pause" }
 });
 
-// One block (a jsPsych trial) of TloadDback.
-function tloadBlock(stream, stdMs, phase, extra = {}) {
+// One block of TloadDback (one jsPsych trial, js/plugin-tload.js).
+//   stream, stdMs: values, or functions worked out when the block starts
+//                  (the calibration picks the next stream and pace as it goes)
+//   kinds: "letters", "digits" or "both" (which answer buttons are shown)
+function tloadBlock({ stream, stdMs, phase, kinds = "both", data = {}, on_finish }) {
   const T = CONFIG.TLOAD;
-  const n = DEV ? Math.min(CONFIG.DEV.tloadBlockItems, stream.length) : stream.length;
+  const value = (x) => (typeof x === "function" ? x() : x);
   return {
-    type: jsPsychTload, stream, n_items: n, std_ms: stdMs, blank_ms: T.blankMs, weights: T.weights,
-    show_letter_button: /[A-Z]/.test(stream),
-    show_digit_buttons: /[0-9]/.test(stream),
-    data: { task: "tload", phase, ...extra }
+    type: jsPsychTload,
+    stream,
+    std_ms: stdMs,
+    n_items: () => (DEV ? Math.min(CONFIG.DEV.tloadBlockItems, value(stream).length) : value(stream).length),
+    blank_ms: T.blankMs,
+    weights: T.weights,
+    show_letter_button: kinds !== "digits",
+    show_digit_buttons: kinds !== "letters",
+    data: { task: "tload", phase, ...data },
+    on_finish
   };
 }
 
@@ -59,46 +70,44 @@ function buildTloadCalibration(jsPsych, { which }) {
       <p>One last task today. It has three short parts to learn it, then a speed test.</p>
       <p><b>Part 1: letters only.</b> Tap <b>SAME LETTER</b> when a letter is the same as the one just before it.
       Otherwise, don't tap.</p>`));
-    timeline.push(tloadBlock(S.famLetters, fam, "familiarization-letters"));
-    timeline.push({ ...tloadScreen("", "Next"), stimulus: () => `<p>You got ${pct(lastTload().letter_accuracy)} right.</p>
-      <p><b>Part 2: numbers only.</b> Tap <b>ODD</b> or <b>EVEN</b> for each number.</p>` });
-    timeline.push(tloadBlock(S.famDigits, fam, "familiarization-digits"));
-    timeline.push({ ...tloadScreen("", "Next"), stimulus: () => `<p>You got ${pct(lastTload().digit_accuracy)} right.</p>
-      <h2>Part 3: both together</h2>${TLOAD_RULES}` });
-    // Both together, repeated (up to 5 blocks) until 85% is reached.
+    timeline.push(tloadBlock({ stream: S.famLetters, stdMs: fam, phase: "familiarization-letters", kinds: "letters" }));
+    timeline.push(tloadScreen(() => `<p>You got ${pct(lastTload().letter_accuracy)} right.</p>
+      <p><b>Part 2: numbers only.</b> Tap <b>ODD</b> or <b>EVEN</b> for each number.</p>`, "Next"));
+    timeline.push(tloadBlock({ stream: S.famDigits, stdMs: fam, phase: "familiarization-digits", kinds: "digits" }));
+    timeline.push(tloadScreen(() => `<p>You got ${pct(lastTload().digit_accuracy)} right.</p>
+      <h2>Part 3: both together</h2>${TLOAD_RULES}`, "Next"));
+
+    // Both together, repeated (up to 5 blocks, a new sequence each time) until 85% is reached.
     let famBlock = 0;
+    const passedOrOut = () => lastTload().weighted_accuracy >= T.passAccuracy || famBlock >= T.familiarizationMaxDualBlocks;
     timeline.push({
       timeline: [
-        { ...tloadBlock(S.famDual[0], fam, "familiarization-dual"),
-          stream: () => S.famDual[famBlock], data: { task: "tload", phase: "familiarization-dual" },
-          on_finish: () => { famBlock++; } },
-        { ...tloadScreen("", "Next"), stimulus: () => `<p>You got ${pct(lastTload().weighted_accuracy)} right.</p>` +
-            (lastTload().weighted_accuracy >= T.passAccuracy || famBlock >= T.familiarizationMaxDualBlocks
-              ? "<p>Well done. Now the speed test.</p>" : "<p>Let's try that once more.</p>") }
+        tloadBlock({ stream: () => S.famDual[famBlock], stdMs: fam, phase: "familiarization-dual",
+                     on_finish: () => { famBlock++; } }),
+        tloadScreen(() => `<p>You got ${pct(lastTload().weighted_accuracy)} right.</p>` +
+          (passedOrOut() ? "<p>Well done. Now the speed test.</p>" : "<p>Let's try that once more.</p>"), "Next")
       ],
-      loop_function: () => lastTload().weighted_accuracy < T.passAccuracy && famBlock < T.familiarizationMaxDualBlocks
+      loop_function: () => !passedOrOut()
     });
   }
 
   timeline.push(tloadScreen(`<h2>Speed test</h2>${TLOAD_RULES}
     <p>The items will come a little faster each round, until it gets hard.
-    Just do your best. Each round takes about a minute.</p>`, "Start"));
+    Just do your best. Each round takes about a minute.</p>`));
 
-  // The calibration itself: one block at a time, the pace decided after each one.
+  // The calibration itself: one block at a time; calibrationState() decides
+  // the next pace after each block. Calibration 1 and 2 use different sequences.
   const cal = calibrationState();
   let b = 0;
   timeline.push({
     timeline: [
-      { ...tloadBlock(S.calibration[which - 1][0], T.calibrationStartStdMs, "calibration"),
-        stream: () => S.calibration[which - 1][b],
-        std_ms: () => cal.std,
-        data: { task: "tload", phase: "calibration", calibration: which },
-        on_finish: (data) => { Object.assign(data, { block: b + 1 }); b++; cal.after(data.weighted_accuracy); } },
+      tloadBlock({ stream: () => S.calibration[which - 1][b], stdMs: () => cal.std, phase: "calibration",
+                   data: { calibration: which },
+                   on_finish: (data) => { data.block = b + 1; b++; cal.after(data.weighted_accuracy); } }),
       // Pause before the next round. After the last round it takes 0 s and shows
       // nothing (a skipped trial would leave a gap in trial_index).
-      { ...tloadPause("", 0),
-        stimulus: () => (cal.done ? "" : "<p>Next round starting...</p>"),
-        trial_duration: () => (cal.done ? 0 : (DEV ? 1 : 4) * 1000) }
+      tloadPause(() => (cal.done ? "" : "<p>Next round starting...</p>"),
+                 () => (cal.done ? 0 : (DEV ? 1 : 4) * 1000))
     ],
     loop_function: () => !cal.done
   });
@@ -175,19 +184,19 @@ function buildTloadMain({ stdMs, source }) {
       <p>This time the task lasts <b>${minutes} minute${minutes === 1 ? "" : "s"}</b> without a break.
       Keep going and do your best the whole time.</p>`),
     {
+      // One 2-minute chunk, repeated until 16 minutes; the stream continues
+      // from where the last chunk stopped, so it is one continuous task.
       timeline: [{
-        ...tloadBlock(S.main, stdMs, "main"),
-        n_items: null,
+        ...tloadBlock({ stream: S.main, stdMs, phase: "main", data: { std_source: source },
+          on_finish: (data) => {
+            data.chunk = ++chunk;
+            pos = data.next_start; prevLetter = data.last_letter;
+            elapsed += data.n_items * data.std_ms;
+          } }),
+        n_items: null,                                       // a chunk ends on time, not item count
         start: () => pos,
         prev_letter: () => prevLetter,
-        duration_ms: () => Math.min(chunkMs, totalMs - elapsed),
-        data: { task: "tload", phase: "main", std_source: source },
-        on_finish: (data) => {
-          chunk++;
-          Object.assign(data, { chunk });
-          pos = data.next_start; prevLetter = data.last_letter;
-          elapsed += data.n_items * data.std_ms;
-        }
+        duration_ms: () => Math.min(chunkMs, totalMs - elapsed)
       }],
       loop_function: () => elapsed < totalMs
     }

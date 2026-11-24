@@ -152,7 +152,6 @@ export async function playSession(page, { maxMinutes = 30, until = null } = {}) 
     if (await page.locator("#done-btn:visible").count()) return page.locator(".done-screen:visible").innerText();
     // Task screens (answered by the simulated participant) and timed pauses: just wait.
     if (await page.locator(".tc-area, #pvt-area, .break-count").count()) { await page.waitForTimeout(100); continue; }
-    if (await page.locator("#jspsych-target .jspsych-html-button-response-btngroup:empty").count()) { await page.waitForTimeout(100); continue; }
     if (await page.locator("#vas-track").count()) {
       await page.locator("#vas-track").click();
       await page.click("#vas-continue");
