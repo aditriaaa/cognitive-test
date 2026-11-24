@@ -29,7 +29,7 @@ It prints one line per check with how many sessions passed:
 | PVT / 2-back / flanker / Stroop / DSST | mean RT + lapses, d′, RT costs, DSST score, RT variability; missing/anticipatory rate (> 30% exclusion) |
 | Baselines 4 + 5 | the TloadDback calibration result |
 | T-rest / T-fatigue | video watched; TloadDback compliance (≥ 70% accuracy, no 2-min stretch without a tap) |
-| Intake answers | incl. colour-blind (for the Stroop rule) |
+| Intake answers and consent | incl. colour-blind (for the Stroop rule); consent version, when, and whether a parent/guardian signed |
 
 then example values and known gaps. It exits with an error if any check
 fails. Standard Python only (no installs).

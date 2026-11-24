@@ -36,6 +36,7 @@
   <script src="js/plugin-vas.js"></script>
   <script src="js/plugin-pvt-touch.js"></script>
   <script src="js/survey.js"></script>
+  <script src="js/consent.js"></script>
   <script src="js/pvt.js"></script>
   <script src="js/plugin-touch-choice.js"></script>
   <script src="js/forms.js"></script>
@@ -61,14 +62,21 @@
   <main id="screen-home" class="screen home" hidden>
     <h1>Cognitive Testing Interface <span class="muted">(placeholder title)</span></h1>
     <div class="home-buttons">
-      <button type="button" class="jspsych-btn big-btn" data-go="signup">Create account</button>
+      <button type="button" class="jspsych-btn big-btn" data-go="consent">Create account</button>
       <button type="button" class="jspsych-btn big-btn" data-go="login">Login</button>
     </div>
+  </main>
+
+  <!-- Consent before creating an account: age, then the form(s) to sign (js/main.js, wording in js/consent.js). -->
+  <main id="screen-consent" class="screen" hidden>
+    <div class="consent-draft" id="consent-draft" hidden>DRAFT wording: not IRB/SRC-approved. For testing only.</div>
+    <div id="consent-step"></div>
   </main>
 
   <!-- Create account -->
   <main id="screen-signup" class="screen" hidden>
     <h1>Create account</h1>
+    <p class="muted" id="consent-summary"></p>
     <form id="signup-form" class="form" novalidate>
       <label>Email
         <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required></label>

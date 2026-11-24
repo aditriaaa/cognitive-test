@@ -257,11 +257,14 @@ function downloadIntake() {
   // so the research files can't be joined back to names without the console.
   const rows = shownParticipants().map((p) => {
     const { submitted_at, version, dev, ...answers } = p.intake || {};
+    const c = p.consent || {};   // consent version, when, whether a parent/guardian signed (never names)
     return { participant_id: p.participant_id, dev: p.dev, created_at: p.created_at,
+             consent_version: c.version, consent_approved: c.approved, consent_signed_at: c.signed_at,
+             consent_guardian_permission: c.guardian_permission,
              intake_version: version, ...answers };
   });
   if (!rows.length) return setErrors($("r-errors"), ["No participants to download."]);
-  download(`cogbat_${which()}_intake_${today()}.csv`, toCsv(rows, ["participant_id", "dev", "created_at", "intake_version"]));
+  download(`cogbat_${which()}_intake_${today()}.csv`, toCsv(rows, ["participant_id", "dev", "created_at", "consent_version", "consent_approved", "consent_signed_at", "consent_guardian_permission", "intake_version"]));
 }
 
 // ---------------------------------------------------------------------------

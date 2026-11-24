@@ -41,7 +41,7 @@ const DEV = PARAMS.get("dev") === "1" || USE_EMULATOR || QUICK;
 // Screens
 // ---------------------------------------------------------------------------
 
-const SCREENS = ["home", "signup", "login", "reset", "dashboard"];
+const SCREENS = ["home", "consent", "signup", "login", "reset", "dashboard"];
 
 function show(name) {
   for (const s of SCREENS) document.getElementById("screen-" + s).hidden = s !== name;
@@ -50,10 +50,93 @@ function show(name) {
   document.getElementById("reset-sent").hidden = true;
   window.scrollTo(0, 0);
   if (name === "dashboard") renderDashboard();
+  if (name === "consent") startConsent();
+  if (name === "signup") {
+    if (!pendingConsent) return show("consent");   // the consent step always comes first
+    document.getElementById("consent-summary").textContent = `Consent signed by ${pendingConsent.participant_name}` +
+      (pendingConsent.guardian_name ? `; permission by ${pendingConsent.guardian_name}.` : ".");
+  }
 }
 
 function showErrors(form, errors) {
   form.querySelector(".errors").innerHTML = errors.map((msg) => `<li>${msg}</li>`).join("");
+}
+
+// ---------------------------------------------------------------------------
+// Consent (before Create account; wording in js/consent.js)
+// ---------------------------------------------------------------------------
+// ONE form for everyone, no age question, nobody excluded (Abhi, 2026-11-24).
+// The participant ticks "I agree" and types their full name (required: this
+// is the consent). A parent/guardian section underneath is for under-18s; it
+// is optional here, but if it is started it must be completed (tick + name).
+// "Signing" = tick + typed name (an electronic signature; the IRB must accept it).
+// The record is kept until the account is created, then saved: names only in
+// the identity record; version/time/whether a guardian signed in the
+// code-only research record (js/storage.js).
+
+let pendingConsent = null;
+
+// Real sign-ups need open enrollment AND approved consent wording (dev testing always allowed).
+function signupClosedReason() {
+  if (DEV) return null;
+  if (!CONFIG.ENROLLMENT_OPEN) return "This study isn't open to new participants yet.";
+  if (!CONFIG.CONSENT.approved) return "The consent forms for this study haven't been approved yet.";
+  return null;
+}
+
+function startConsent() {
+  pendingConsent = null;
+  document.getElementById("consent-draft").hidden = CONFIG.CONSENT.approved;
+  const step = document.getElementById("consent-step");
+  const closed = signupClosedReason();
+  if (closed) {
+    step.innerHTML = `<h1>Create account</h1><p class="errors">${closed}</p>
+      <button type="button" class="link-btn" id="consent-back">Back</button>`;
+    step.querySelector("#consent-back").addEventListener("click", () => show("home"));
+    return;
+  }
+  const F = CONSENT_FORM;
+  step.innerHTML = `
+    <h1>${F.title}</h1>
+    <div class="consent-text">${F.body}</div>
+    <button type="button" class="link-btn" id="consent-print">Print or save a copy</button>
+    <form class="form" id="consent-form" novalidate>
+      <label class="check"><input type="checkbox" name="agree"> ${F.participant.agree}</label>
+      <label>${F.participant.nameLabel}
+        <input name="name" type="text" autocomplete="off" maxlength="80"></label>
+      <fieldset class="consent-guardian">
+        <legend>${F.guardian.heading}</legend>
+        <p class="muted">${F.guardian.intro}</p>
+        <label class="check"><input type="checkbox" name="guardian_agree"> ${F.guardian.agree}</label>
+        <label>${F.guardian.nameLabel}
+          <input name="guardian_name" type="text" autocomplete="off" maxlength="80"></label>
+      </fieldset>
+      <ul class="errors" aria-live="polite"></ul>
+      <button type="submit" class="jspsych-btn big-btn">Continue</button>
+      <button type="button" class="link-btn" id="consent-back">Back</button>
+    </form>`;
+  window.scrollTo(0, 0);
+  step.querySelector("#consent-print").addEventListener("click", () => window.print());
+  step.querySelector("#consent-back").addEventListener("click", () => show("home"));
+  const form = step.querySelector("#consent-form");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = form.name.value.trim();
+    const guardianName = form.guardian_name.value.trim();
+    const guardianStarted = guardianName !== "" || form.guardian_agree.checked;
+    const errors = [];
+    if (!form.agree.checked) errors.push("Tick the box to agree, or go back.");
+    if (name.length < 2) errors.push("Type your full name.");
+    if (guardianStarted && (!form.guardian_agree.checked || guardianName.length < 2)) {
+      errors.push("Parent or guardian: tick the box and type your full name (or leave this part empty).");
+    }
+    showErrors(form, errors);
+    if (errors.length) return;
+    pendingConsent = { version: CONFIG.CONSENT.version, approved: CONFIG.CONSENT.approved,
+                       signed_at: new Date().toISOString(), participant_name: name };
+    if (guardianStarted) pendingConsent.guardian_name = guardianName;
+    show("signup");
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -66,8 +149,10 @@ async function onSignup(e) {
   const v = (name) => form.elements[name].value.trim();
   const intakeFields = [...document.querySelectorAll("#intake-fields input, #intake-fields select")];
 
-  // Before IRB/SRC approval, only dev/test accounts can be made (CONFIG.ENROLLMENT_OPEN).
-  if (!CONFIG.ENROLLMENT_OPEN && !DEV) return showErrors(form, ["This study isn't open to new participants yet."]);
+  // Before IRB/SRC approval, only dev/test accounts can be made.
+  const closed = signupClosedReason();
+  if (closed) return showErrors(form, [closed]);
+  if (!pendingConsent) return show("consent");
 
   const errors = [];
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v("email"))) errors.push("Enter a valid email address.");
@@ -88,12 +173,13 @@ async function onSignup(e) {
   const result = await createAccount({
     email: v("email"), password: form.password.value,
     first_name: v("first_name"), last_name: v("last_name"),
-    intake, dev: DEV
+    intake, consent: pendingConsent, dev: DEV
   });
   button.disabled = false;
 
   if (!result.ok) return showErrors(form, [result.error]);
   form.reset(); // clears the passwords from the page
+  pendingConsent = null;
   show("dashboard"); // Firebase logs the new account in automatically
 }
 
@@ -443,11 +529,6 @@ function setup() {
     if (QUICK) banner.textContent = "QUICK TEST: no login, nothing uploaded";
   }
   document.getElementById("intake-fields").innerHTML = INTAKE_FORM_HTML;
-  // Before IRB/SRC approval: say on the Create account screen that sign-up is closed.
-  if (!CONFIG.ENROLLMENT_OPEN && !DEV) {
-    document.getElementById("signup-form").insertAdjacentHTML("beforebegin",
-      `<p class="errors" id="enrollment-closed">This study isn't open to new participants yet.</p>`);
-  }
 
   // Any button with data-go="signup" etc. switches to that screen.
   document.querySelectorAll("[data-go]").forEach((btn) =>

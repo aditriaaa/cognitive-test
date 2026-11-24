@@ -39,7 +39,8 @@ const signUp = (page, email) => page.evaluate((email) => createAccount({ email, 
   first_name: "Testfirst", last_name: "Testlast", dev: DEV,
   // All 7 intake answers, as the Create account form requires.
   intake: { age: "16", handedness: "Right", prior_cognitive_tests: "None", video_game_hours_week: "3",
-            typical_sleep_hours: "8", needs_glasses: "No", colour_blind: "No" } }), email);
+            typical_sleep_hours: "8", needs_glasses: "No", colour_blind: "No" },
+  consent: { version: CONFIG.CONSENT.version, approved: CONFIG.CONSENT.approved, signed_at: new Date().toISOString(), participant_name: "Test Person" } }), email);
 async function loginUi(page, email) {
   await page.evaluate(() => show("login"));
   await page.fill("#login-form [name=email]", email);

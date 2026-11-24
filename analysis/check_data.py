@@ -34,7 +34,8 @@ PRE_SESSION_FACTS = ["sleep_hours", "caffeine_4h", "last_meal", "exercise_2h", "
 VAS_EVERY_SESSION = ["sleep_quality", "fatigue_pre", "motivation_pre", "stress_pre", "effort_post", "distraction_post"]
 VAS_TEST_SESSIONS = ["fatigue_post_manipulation"]
 INTAKE = ["age", "handedness", "prior_cognitive_tests", "video_game_hours_week",
-          "typical_sleep_hours", "needs_glasses", "colour_blind"]
+          "typical_sleep_hours", "needs_glasses", "colour_blind",
+          "consent_version", "consent_signed_at", "consent_guardian_permission"]   # consent version, when, guardian signed?
 TASKS = ["pvt", "nback", "flanker", "dsst", "stroop"]
 CALIBRATION_SESSIONS = {5: "1", 6: "2"}   # end of baselines 4 and 5 (session numbers)
 
@@ -256,7 +257,7 @@ def main(trials_path, sessions_path, intake_path):
             missing = [k for k in INTAKE if not row.get(k)]
             if missing:
                 raise MissingData("missing: " + ", ".join(missing))
-        check("Intake answers (incl. colour-blind for Stroop)", code, intake_ok)
+        check("Intake answers (incl. colour-blind) and consent record", code, intake_ok)
 
     # ---- Report ----
     print(f"Data check: {len(complete)} complete sessions ({len(sessions) - len(complete)} incomplete attempts), "

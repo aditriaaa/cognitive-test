@@ -413,3 +413,27 @@ h2 { font-size: 1.5em; margin: 0.4em 0; }
 
 /* Forgot-password confirmation */
 .reset-sent { background: #e8f3ea; border: 1px solid #9ccfa6; border-radius: 8px; padding: 10px 12px; }
+
+/* ---------- Consent / permission / assent (main.js, js/consent.js) ---------- */
+.consent-draft {
+  background: #fff3cd; border: 2px solid #d39e00; color: #6b4e00; border-radius: 8px;
+  padding: 8px 12px; font-weight: 700; margin-bottom: 12px;
+}
+.consent-text {
+  border: 1px solid var(--border); border-radius: 8px; padding: 4px 16px 12px;
+  max-height: 55vh; overflow-y: auto; -webkit-user-select: text; user-select: text;
+  font-size: 18px;
+}
+.consent-text h3 { font-size: 19px; margin: 14px 0 4px; }
+.consent-text ul { padding-left: 1.2em; margin: 4px 0; }
+.form label.check { flex-direction: row; align-items: flex-start; gap: 12px; }
+.form label.check input { width: 28px; height: 28px; flex: none; margin-top: 2px; }
+
+/* Printing a form: just the form text, no scrolling box or buttons. */
+@media print {
+  .dev-banner, #consent-step form, #consent-print, .link-btn { display: none !important; }
+  .consent-text { max-height: none; overflow: visible; border: none; }
+}
+.consent-guardian { border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px 12px; margin: 8px 0; }
+.consent-guardian legend { font-weight: 700; padding: 0 6px; }
+.consent-guardian p { margin: 4px 0 10px; font-size: 16px; }

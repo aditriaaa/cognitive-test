@@ -7,8 +7,10 @@
 // file → Publish. Keep this file and the console in sync.
 //
 // Collections:
-//   identities/{uid}        email + first/last name + participant code. IDENTITY ONLY.
-//   participants/{code}     code-only research record: intake answers, dev flag.
+//   identities/{uid}        email + first/last name + participant code + signed consent
+//                           (incl. signers' typed names). IDENTITY ONLY.
+//   participants/{code}     code-only research record: intake answers, consent (form,
+//                           version, time; no names), dev flag.
 //                           Never contains a name or email (CLAUDE.md rule 5).
 //     /sessions/{sid}       one session attempt (number, type, form, start/end, complete)
 //       /trials/{n}         one trial = one row of raw data
@@ -39,6 +41,26 @@ service cloud.firestore {
     }
     // True if the logged-in person is the owner of participant record {code}.
     function ownsParticipant(code) { return signedIn() && participant(code).owner_uid == request.auth.uid; }
+    // Consent record (made by the consent step before sign-up): ONE form for
+    // everyone; the participant signs, a parent/guardian may also sign.
+    // In the IDENTITY record: the full record incl. the typed names.
+    function validIdentityConsent(c) {
+      return c is map
+        && c.keys().hasOnly(['version', 'approved', 'signed_at', 'participant_name', 'guardian_name'])
+        && c.version is string && c.approved is bool && c.signed_at is string
+        && c.participant_name is string && c.participant_name.size() >= 2 && c.participant_name.size() <= 80
+        && (!('guardian_name' in c) || (c.guardian_name is string && c.guardian_name.size() >= 2 && c.guardian_name.size() <= 80));
+    }
+    // In the code-only RESEARCH record: no names, only version, approval, time,
+    // and whether a parent/guardian signed. A real (non-dev) participant needs
+    // consent wording that was marked approved.
+    function validResearchConsent(c, isDev) {
+      return c is map
+        && c.keys().hasOnly(['version', 'approved', 'signed_at', 'guardian_permission'])
+        && c.keys().hasAll(['version', 'approved', 'signed_at', 'guardian_permission'])
+        && c.version is string && c.approved is bool && c.signed_at is string && c.guardian_permission is bool
+        && (isDev || c.approved == true);
+    }
     function SESSION_KEYS() {
       return ['participant_id', 'session_number', 'session_type', 'form', 'version', 'dev',
               'start', 'end', 'complete', 'n_trials'];
@@ -68,7 +90,8 @@ service cloud.firestore {
     match /identities/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isResearcher());
       allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['email', 'first_name', 'last_name', 'participant_id', 'created_at'])
+        && request.resource.data.keys().hasOnly(['email', 'first_name', 'last_name', 'participant_id', 'created_at', 'consent'])
+        && validIdentityConsent(request.resource.data.consent)
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.first_name is string && request.resource.data.first_name.size() >= 1 && request.resource.data.first_name.size() <= 50
         && request.resource.data.last_name is string && request.resource.data.last_name.size() >= 1 && request.resource.data.last_name.size() <= 50
@@ -81,7 +104,10 @@ service cloud.firestore {
     match /participants/{code} {
       allow read: if signedIn() && (resource.data.owner_uid == request.auth.uid || isResearcher());
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['participant_id', 'number', 'owner_uid', 'dev', 'created_at', 'intake'])
+        && request.resource.data.keys().hasOnly(['participant_id', 'number', 'owner_uid', 'dev', 'created_at', 'intake', 'consent'])
+        && validResearchConsent(request.resource.data.consent, request.resource.data.dev)
+        // matches the signed record in the identity (guardian signed or not)
+        && ('guardian_name' in getAfter(doc('identities', request.auth.uid)).data.consent) == request.resource.data.consent.guardian_permission
         && request.resource.data.participant_id == code
         && request.resource.data.owner_uid == request.auth.uid
         && request.resource.data.dev is bool

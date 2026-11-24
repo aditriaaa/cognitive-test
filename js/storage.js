@@ -42,8 +42,11 @@ const pad3 = (n) => String(n).padStart(3, "0");
 
 // Creates the login, then (in ONE all-or-nothing database transaction) takes
 // the next participant code and writes the identity and research records.
+// consent: the signed consent record from the consent step (main.js). The
+// signers' names go ONLY into the identity record; the research record gets
+// the version, when, and whether a parent/guardian signed (no names).
 // Returns { ok: true, participant_id } or { ok: false, error }.
-async function createAccount({ email, password, first_name, last_name, intake, dev }) {
+async function createAccount({ email, password, first_name, last_name, intake, consent, dev }) {
   let cred;
   try {
     cred = await fbAuth.createUserWithEmailAndPassword(email.trim(), password);
@@ -66,11 +69,13 @@ async function createAccount({ email, password, first_name, last_name, intake, d
       // Research record: code only. Intake is stamped with version + dev flag.
       tx.set(fbDb.doc(`participants/${code}`), {
         participant_id: code, number, owner_uid: uid, dev, created_at: now,
-        intake: { ...intake, submitted_at: now, version: CONFIG.VERSION, dev }
+        intake: { ...intake, submitted_at: now, version: CONFIG.VERSION, dev },
+        consent: { version: consent.version, approved: consent.approved, signed_at: consent.signed_at,
+                   guardian_permission: Boolean(consent.guardian_name) }
       });
-      // Identity record: the only place the name and email live.
+      // Identity record: the only place names and the email live (incl. consent signatures).
       tx.set(fbDb.doc(`identities/${uid}`), {
-        email: cred.user.email, first_name, last_name, participant_id: code, created_at: now
+        email: cred.user.email, first_name, last_name, participant_id: code, created_at: now, consent
       });
       return code;
     });

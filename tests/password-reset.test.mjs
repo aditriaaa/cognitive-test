@@ -17,7 +17,8 @@ await page.waitForSelector("#screen-home:not([hidden])");
 
 // A participant account, then log out.
 const made = await page.evaluate(() => createAccount({ email: "forgetful@test.dev", password: "oldpassword1",
-  first_name: "T", last_name: "U", intake: { age: "15" }, dev: DEV }));
+  first_name: "T", last_name: "U", intake: { age: "15" }, dev: DEV,
+  consent: { version: CONFIG.CONSENT.version, approved: CONFIG.CONSENT.approved, signed_at: new Date().toISOString(), participant_name: "Test Person" } }));
 await page.evaluate(() => logout());
 check("test account created", made.ok, made.participant_id);
 
