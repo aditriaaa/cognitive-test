@@ -15,6 +15,8 @@ const CONFIG = {
   // ENROLLMENT SWITCH (hard rule 1: no participant data before IRB/SRC approval).
   // false = the site refuses NEW real (non-dev) sign-ups ("not open yet");
   // dev/test accounts (?dev=1) still work. Set to true only after approval.
+  // The database has its own lock (settings/enrollment, see firestore.rules):
+  // BOTH must be open before anyone can join.
   ENROLLMENT_OPEN: false,
 
   // Consent / parental permission / assent (wording in js/consent.js).

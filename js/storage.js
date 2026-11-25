@@ -88,9 +88,10 @@ async function createAccount({ email, password, first_name, last_name, intake, c
     if (err.code !== "permission-denied") {
       return { ok: false, error: "Your account couldn't be set up. Check your internet connection and try again." };
     }
-    // Refused by the rules. In practice: the code counter doesn't match the
-    // participant records (e.g. after deleting test data by hand), so the
-    // "next" code already exists.
+    // Refused by the rules. Real account: usually the sign-up lock is closed or its
+    // consent_version doesn't match (settings/enrollment, see firestore.rules).
+    // Either kind: the code counter doesn't match the participant records (e.g.
+    // after deleting test data by hand), so the "next" code already exists.
     return { ok: false, error: dev
       ? "Dev mode: sign-up refused. counters/dev doesn't match the D### participant records " +
         "(the next code already exists). Fix it in the Firebase console, then try again."

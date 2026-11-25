@@ -17,6 +17,11 @@
 //   counters/participants   last real participant number used (P001, P002, ...)
 //   counters/dev            last dev/test number used (D001, D002, ...)
 //   researchers/{uid}       exists = that login is a researcher. Added by hand in the console.
+//   settings/enrollment     SIGN-UP LOCK, made by hand in the console:
+//                             open (boolean)            true = real accounts can be made
+//                             consent_version (string)  the approved consent form's version
+//                           Missing, or open not true = no real (P###) accounts. Test (D###)
+//                           accounts and existing accounts are not affected.
 //
 // {uid} is the random ID Firebase gives each login. It is not personal data.
 
@@ -53,13 +58,21 @@ service cloud.firestore {
     }
     // In the code-only RESEARCH record: no names, only version, approval, time,
     // and whether a parent/guardian signed. A real (non-dev) participant needs
-    // consent wording that was marked approved.
+    // consent wording that was marked approved (this value comes from the browser;
+    // enrollmentOpenFor below is the check a browser cannot fake).
     function validResearchConsent(c, isDev) {
       return c is map
         && c.keys().hasOnly(['version', 'approved', 'signed_at', 'guardian_permission'])
         && c.keys().hasAll(['version', 'approved', 'signed_at', 'guardian_permission'])
         && c.version is string && c.approved is bool && c.signed_at is string && c.guardian_permission is bool
         && (isDev || c.approved == true);
+    }
+    // SIGN-UP LOCK: real accounts only while settings/enrollment says open, and
+    // only with the approved consent version. Nobody can change that record from
+    // the website; if it doesn't exist, real sign-ups are refused.
+    function enrollmentOpenFor(consentVersion) {
+      let s = get(doc('settings', 'enrollment')).data;
+      return s.open == true && s.consent_version == consentVersion;
     }
     function SESSION_KEYS() {
       return ['participant_id', 'session_number', 'session_type', 'form', 'version', 'dev',
@@ -70,6 +83,11 @@ service cloud.firestore {
     match /researchers/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
+    }
+
+    // ---- Settings (sign-up lock): only the console can read or change it. ----
+    match /settings/{id} {
+      allow read, write: if false;
     }
 
     // ---- Counters: hand out participant codes one at a time. ----
@@ -106,7 +124,9 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['participant_id', 'number', 'owner_uid', 'dev', 'created_at', 'intake', 'consent'])
         && validResearchConsent(request.resource.data.consent, request.resource.data.dev)
-        // matches the signed record in the identity (guardian signed or not)
+        && (request.resource.data.dev || enrollmentOpenFor(request.resource.data.consent.version))
+        // matches the signed record in the identity (same form version; guardian signed or not)
+        && getAfter(doc('identities', request.auth.uid)).data.consent.version == request.resource.data.consent.version
         && ('guardian_name' in getAfter(doc('identities', request.auth.uid)).data.consent) == request.resource.data.consent.guardian_permission
         && request.resource.data.participant_id == code
         && request.resource.data.owner_uid == request.auth.uid
