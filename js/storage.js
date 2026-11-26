@@ -46,57 +46,113 @@ const pad3 = (n) => String(n).padStart(3, "0");
 // signers' names go ONLY into the identity record; the research record gets
 // the version, when, and whether a parent/guardian signed (no names).
 // Returns { ok: true, participant_id } or { ok: false, error }.
+//
+// Two things that can go wrong are handled here:
+//  - Several people signing up at the same moment all try to take the same
+//    next code. The rules refuse everyone but the first, so the others wait a
+//    random moment and try again with the next free code (up to 6 tries).
+//  - The page is closed (or the connection lost) after the login is made but
+//    before the records are saved: a login with no records. Signing up again
+//    with the same email AND password finishes that account.
 async function createAccount({ email, password, first_name, last_name, intake, consent, dev }) {
   let cred;
   try {
     cred = await fbAuth.createUserWithEmailAndPassword(email.trim(), password);
   } catch (err) {
-    return { ok: false, error: friendlyAuthError(err) };
+    if (err.code !== "auth/email-already-in-use") return { ok: false, error: friendlyAuthError(err) };
+    const unfinished = await signInToUnfinishedAccount(email, password);
+    if (!unfinished.ok) return unfinished;
+    cred = unfinished.cred;
   }
   const uid = cred.user.uid;
   const now = new Date().toISOString();
+  const writeRecords = () => fbDb.runTransaction(async (tx) => {
+    // Real participants get P001, P002, ...; dev/test accounts get D001, ...
+    // so testing never uses up real participant numbers.
+    const counterRef = fbDb.doc(`counters/${dev ? "dev" : "participants"}`);
+    const counter = await tx.get(counterRef);
+    const number = (counter.exists ? counter.data().last : 0) + 1;
+    const code = (dev ? "D" : "P") + pad3(number);
 
-  try {
-    const participant_id = await fbDb.runTransaction(async (tx) => {
-      // Real participants get P001, P002, ...; dev/test accounts get D001, ...
-      // so testing never uses up real participant numbers.
-      const counterRef = fbDb.doc(`counters/${dev ? "dev" : "participants"}`);
-      const counter = await tx.get(counterRef);
-      const number = (counter.exists ? counter.data().last : 0) + 1;
-      const code = (dev ? "D" : "P") + pad3(number);
-
-      tx.set(counterRef, { last: number });
-      // Research record: code only. Intake is stamped with version + dev flag.
-      tx.set(fbDb.doc(`participants/${code}`), {
-        participant_id: code, number, owner_uid: uid, dev, created_at: now,
-        intake: { ...intake, submitted_at: now, version: CONFIG.VERSION, dev },
-        consent: { version: consent.version, approved: consent.approved, signed_at: consent.signed_at,
-                   guardian_permission: Boolean(consent.guardian_name) }
-      });
-      // Identity record: the only place names and the email live (incl. consent signatures).
-      tx.set(fbDb.doc(`identities/${uid}`), {
-        email: cred.user.email, first_name, last_name, participant_id: code, created_at: now, consent
-      });
-      return code;
+    tx.set(counterRef, { last: number });
+    // Research record: code only. Intake is stamped with version + dev flag.
+    tx.set(fbDb.doc(`participants/${code}`), {
+      participant_id: code, number, owner_uid: uid, dev, created_at: now,
+      intake: { ...intake, submitted_at: now, version: CONFIG.VERSION, dev },
+      consent: { version: consent.version, approved: consent.approved, signed_at: consent.signed_at,
+                 guardian_permission: Boolean(consent.guardian_name) }
     });
-    return { ok: true, participant_id };
-  } catch (err) {
-    // The login was made but the records weren't. Remove the login so the
-    // person can simply try again, instead of being stuck with a half account.
-    console.error(err);
-    try { await cred.user.delete(); } catch (e) { /* ignore */ }
-    if (err.code !== "permission-denied") {
-      return { ok: false, error: "Your account couldn't be set up. Check your internet connection and try again." };
+    // Identity record: the only place names and the email live (incl. consent signatures).
+    tx.set(fbDb.doc(`identities/${uid}`), {
+      email: cred.user.email, first_name, last_name, participant_id: code, created_at: now, consent
+    });
+    return code;
+  });
+
+  const MAX_TRIES = 6;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return { ok: true, participant_id: await writeRecords() };
+    } catch (err) {
+      console.error(err);
+      // The records may have been saved even though the reply was lost.
+      const saved = await savedCode(uid);
+      if (saved) return { ok: true, participant_id: saved };
+      if (err.code === "permission-denied" && attempt < MAX_TRIES) {
+        // Probably someone else took this code a moment ago: wait, try the next one.
+        console.warn(`Sign-up refused (try ${attempt}), trying again`);
+        await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 700 * attempt));
+        continue;
+      }
+      // Give up. Remove the login only if we know no records were saved, so the
+      // person can simply try again; if we can't tell (offline), the login stays
+      // and signing up again with the same email and password will finish it.
+      if (saved === null) { try { await cred.user.delete(); } catch (e) { /* ignore */ } }
+      else { try { await logout(); } catch (e) { /* ignore */ } }
+      if (err.code !== "permission-denied") {
+        return { ok: false, error: "Your account couldn't be set up. Check your internet connection and try again." };
+      }
+      // Still refused after several tries. Real account: usually the sign-up lock
+      // is closed or its consent_version doesn't match (settings/enrollment, see
+      // firestore.rules). Either kind: the code counter doesn't match the
+      // participant records (e.g. after deleting test data by hand).
+      return { ok: false, error: dev
+        ? "Dev mode: sign-up refused. Either counters/dev doesn't match the D### participant records " +
+          "(the next code already exists; fix it in the Firebase console), or the rules refused the records."
+        : "Your account couldn't be set up. Please contact the researcher." };
     }
-    // Refused by the rules. Real account: usually the sign-up lock is closed or its
-    // consent_version doesn't match (settings/enrollment, see firestore.rules).
-    // Either kind: the code counter doesn't match the participant records (e.g.
-    // after deleting test data by hand), so the "next" code already exists.
-    return { ok: false, error: dev
-      ? "Dev mode: sign-up refused. counters/dev doesn't match the D### participant records " +
-        "(the next code already exists). Fix it in the Firebase console, then try again."
-      : "Your account couldn't be set up. Please contact the researcher." };
   }
+}
+
+// After a sign-up attempt fails: the participant code already saved for this
+// login, null if there are definitely no records, or undefined if it can't be
+// checked (e.g. offline).
+async function savedCode(uid) {
+  try {
+    const snap = await withTimeout(fbDb.doc(`identities/${uid}`).get({ source: "server" }), 8000);
+    return snap.exists ? snap.data().participant_id : null;
+  } catch (e) {
+    return undefined;
+  }
+}
+
+// Sign-up with an email that already has a login. If the password is right and
+// the login has NO records (an earlier sign-up was cut off), log in so the
+// sign-up can finish. Otherwise: the usual "already exists" message.
+async function signInToUnfinishedAccount(email, password) {
+  const exists = { ok: false, error: friendlyAuthError({ code: "auth/email-already-in-use" }) };
+  let cred;
+  try {
+    cred = await fbAuth.signInWithEmailAndPassword(email.trim(), password);
+  } catch (err) {
+    return err.code === "auth/network-request-failed" || err.code === "auth/too-many-requests" ? { ok: false, error: friendlyAuthError(err) } : exists;
+  }
+  const saved = await savedCode(cred.user.uid);
+  if (saved === null) return { ok: true, cred };   // login without records: finish it
+  await logout();                                    // a complete account (or can't tell)
+  return saved === undefined
+    ? { ok: false, error: "Couldn't reach the server. Check your internet connection and try again." }
+    : exists;
 }
 
 async function login(email, password) {

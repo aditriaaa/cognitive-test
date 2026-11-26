@@ -245,10 +245,16 @@ async function renderDashboard() {
     return;
   }
   if (!account) {
-    // Logged in to Firebase but no identity record (e.g. deleted by hand).
-    if (DEV && fbAuth.currentUser) return showBrokenAccount(status);
+    if (!fbAuth.currentUser) return show("home");
+    // Logged in to Firebase but no identity record: the sign-up was cut off
+    // (page closed or connection lost), or test data was deleted by hand.
+    if (DEV) return showBrokenAccount(status);
     await logout();
-    return show("home");
+    status.innerHTML = `<p class="errors">Setting up your account wasn't finished. Tap Create account and sign up
+      again with the same email and password to finish it.</p>
+      <button type="button" class="jspsych-btn big-btn" id="dash-finish-signup">Create account</button>`;
+    document.getElementById("dash-finish-signup").addEventListener("click", () => show("consent"));
+    return;
   }
 
   // textContent (not innerHTML) because the name was typed by the user.

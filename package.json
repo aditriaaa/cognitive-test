@@ -14,7 +14,8 @@
     "test:tload": "node tests/tload.test.mjs",
     "test:video": "node tests/video.test.mjs",
     "test:reset": "firebase emulators:exec --only auth,firestore --project demo-cognitivebattery \"node tests/password-reset.test.mjs\"",
-    "test:consent": "firebase emulators:exec --only auth,firestore --project demo-cognitivebattery \"node tests/consent.test.mjs\""
+    "test:consent": "firebase emulators:exec --only auth,firestore --project demo-cognitivebattery \"node tests/consent.test.mjs\"",
+    "test:signup": "firebase emulators:exec --only auth,firestore --project demo-cognitivebattery \"node tests/signup.test.mjs\""
   },
   "devDependencies": {
     "firebase-tools": "14.27.0",
