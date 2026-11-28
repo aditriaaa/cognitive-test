@@ -524,3 +524,7 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px s
 .consent-guardian { border: 2px solid var(--sky-edge); border-radius: 14px; padding: 8px 14px 12px; margin: 8px 0; background: #f3f9ff; }
 .consent-guardian legend { font-weight: 700; padding: 0 6px; }
 .consent-guardian p { margin: 4px 0 10px; font-size: 16px; }
+
+/* Home page: the study title (heading) and the full title under it. */
+.study-title { margin-bottom: 0.2em; }
+.study-subtitle { margin-top: 0; font-size: 1.05rem; line-height: 1.4; color: var(--muted); }
